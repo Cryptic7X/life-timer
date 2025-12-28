@@ -314,24 +314,31 @@
     }
     
     /* Responsive */
+    /* Responsive */
     @media (max-width: 500px) {
       .container {
         max-width: 100%;
-        padding: 15px;
+        padding: 12px;
       }
       
       .clock-display {
-        padding: 30px 25px;
+        padding: 25px 20px;          /* Reduced padding */
+        border-radius: 16px;
       }
       
       .clock-time {
-        font-size: 2.2rem;
-        letter-spacing: 2px;
+        font-size: 2rem;             /* Smaller font for mobile */
+        letter-spacing: 1px;         /* Tighter letter spacing */
+        word-spacing: -2px;          /* Bring colons closer */
       }
       
       .clock-label {
-        font-size: 0.6rem;
-        letter-spacing: 2px;
+        font-size: 0.55rem;
+        letter-spacing: 1.5px;       /* Tighter spacing */
+      }
+      
+      .timer-title {
+        font-size: 0.9rem;
       }
       
       .stats-grid {
@@ -342,8 +349,24 @@
         grid-column: 1 / -1;
       }
       
+      .stat-value {
+        font-size: 1.5rem;
+      }
+      
       .setup h1 {
         font-size: 1.8rem;
+      }
+    }
+    
+    /* Extra small phones */
+    @media (max-width: 360px) {
+      .clock-time {
+        font-size: 1.7rem;           /* Even smaller for tiny screens */
+        letter-spacing: 0px;
+      }
+      
+      .clock-display {
+        padding: 20px 15px;
       }
     }
   </style>
