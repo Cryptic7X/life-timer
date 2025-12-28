@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="description" content="Life Timer - Count your remaining time">
+  <meta name="theme-color" content="#000000">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="Life Timer">
+  
+  <title>Life Timer ⌛</title>
+  
+  <link rel="manifest" href="./manifest.json">
+  <link rel="icon" type="image/png" href="./icon-192.png">
+  <link rel="apple-touch-icon" href="./icon-192.png">
+  
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      background: #000000;
+      color: #00ff00;
+      font-family: 'Courier New', Courier, monospace;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+    
+    .container {
+      width: 100%;
+      max-width: 500px;
+      padding: 20px;
+    }
+    
+    /* Setup Screen */
+    .setup {
+      text-align: center;
+      animation: fadeIn 0.5s ease;
+    }
+    
+    .setup h1 {
+      font-size: 2rem;
+      margin-bottom: 10px;
+      text-shadow: 0 0 10px rgba(0, 255, 0, 0.7);
+    }
+    
+    .setup p {
+      color: #00cc00;
+      margin-bottom: 30px;
+      font-size: 0.9rem;
+    }
+    
+    .form-group {
+      margin-bottom: 20px;
+    }
+    
+    label {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 0.95rem;
+      text-align: left;
+    }
+    
+    input[type="date"],
+    select {
+      width: 100%;
+      padding: 12px;
+      background: #001100;
+      border: 2px solid #00ff00;
+      border-radius: 8px;
+      color: #00ff00;
+      font-family: inherit;
+      font-size: 1rem;
+    }
+    
+    input[type="date"]:focus,
+    select:focus {
+      outline: none;
+      box-shadow: 0 0 15px rgba(0, 255, 0, 0.5);
+    }
+    
+    input[type="number"] {
+      width: 100%;
+      padding: 12px;
+      background: #001100;
+      border: 2px solid #00ff00;
+      border-radius: 8px;
+      color: #00ff00;
+      font-family: inherit;
+      font-size: 1rem;
+    }
+    
+    button {
+      width: 100%;
+      padding: 15px;
+      background: #00ff00;
+      color: #000000;
+      border: none;
+      border-radius: 8px;
+      font-size: 1.1rem;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      font-family: inherit;
+    }
+    
+    button:hover {
+      background: #00cc00;
+      transform: scale(1.02);
+    }
+    
+    button:active {
+      transform: scale(0.98);
+    }
+    
+    button.secondary {
+      background: transparent;
+      color: #00ff00;
+      border: 2px solid #00ff00;
+      margin-top: 10px;
+    }
+    
+    button.secondary:hover {
+      background: rgba(0, 255, 0, 0.1);
+    }
+    
+    /* Timer Screen */
+    .timer {
+      text-align: center;
+      animation: fadeIn 0.5s ease;
+    }
+    
+    .clock-display {
+      background: linear-gradient(145deg, #001100, #000800);
+      border: 3px solid #00ff00;
+      border-radius: 15px;
+      padding: 30px 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 0 30px rgba(0, 255, 0, 0.3),
+                  inset 0 0 20px rgba(0, 255, 0, 0.1);
+    }
+    
+    .clock-time {
+      font-size: 2.5rem;
+      font-weight: bold;
+      letter-spacing: 2px;
+      color: #00ff00;
+      text-shadow: 0 0 20px rgba(0, 255, 0, 0.8);
+      margin-bottom: 10px;
+    }
+    
+    .clock-label {
+      font-size: 0.7rem;
+      color: #00aa00;
+      letter-spacing: 3px;
+    }
+    
+    .timer-title {
+      color: #00aa00;
+      margin-top: 15px;
+      font-size: 1.1rem;
+    }
+    
+    /* Progress Bar */
+    .progress-section {
+      margin: 25px 0;
+    }
+    
+    .progress-bar {
+      width: 100%;
+      height: 25px;
+      background: #001100;
+      border: 2px solid #00ff00;
+      border-radius: 12px;
+      overflow: hidden;
+      position: relative;
+    }
+    
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #00ff00, #00aa00);
+      transition: width 0.5s ease;
+      box-shadow: 0 0 10px rgba(0, 255, 0, 0.5);
+    }
+    
+    .progress-text {
+      margin-top: 8px;
+      font-size: 0.9rem;
+      color: #00cc00;
+    }
+    
+    /* Stats Grid */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 15px;
+      margin: 25px 0;
+    }
+    
+    .stat-card {
+      background: #001100;
+      border: 2px solid #00ff00;
+      border-radius: 10px;
+      padding: 15px 10px;
+      text-align: center;
+    }
+    
+    .stat-value {
+      font-size: 1.5rem;
+      font-weight: bold;
+      color: #00ff00;
+      margin-bottom: 5px;
+    }
+    
+    .stat-label {
+      font-size: 0.75rem;
+      color: #00aa00;
+    }
+    
+    /* Animations */
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    
+    @keyframes pulse {
+      0%, 100% {
+        opacity: 1;
+      }
+      50% {
+        opacity: 0.7;
+      }
+    }
+    
+    .hidden {
+      display: none;
+    }
+    
+    /* Responsive */
+    @media (max-width: 400px) {
+      .clock-time {
+        font-size: 1.8rem;
+      }
+      
+      .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+      
+      .stat-card:last-child {
+        grid-column: 1 / -1;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Setup Screen -->
+    <div id="setupScreen" class="setup hidden">
+      <h1>⌛ Life Timer</h1>
+      <p>Set your birthdate once. Saved permanently on this device.</p>
+      
+      <div class="form-group">
+        <label for="birthdate">Your Birthdate:</label>
+        <input type="date" id="birthdate" max="">
+      </div>
+      
+      <div class="form-group">
+        <label for="country">Life Expectancy:</label>
+        <select id="country">
+          <option value="73.4">Global Average (~73.4 years)</option>
+          <option value="70.8">India (~70.8 years)</option>
+          <option value="78.9">USA (~78.9 years)</option>
+          <option value="84.0">Japan (~84.0 years)</option>
+          <option value="84.3">Singapore (~84.3 years)</option>
+          <option value="81.3">UK (~81.3 years)</option>
+          <option value="76.0">Brazil (~76.0 years)</option>
+          <option value="custom">Custom</option>
+        </select>
+      </div>
+      
+      <div class="form-group hidden" id="customExpectancy">
+        <label for="customYears">Custom Years:</label>
+        <input type="number" id="customYears" min="50" max="100" step="0.1" value="73.4">
+      </div>
+      
+      <button onclick="saveSettings()">🕐 Start Timer</button>
+    </div>
+    
+    <!-- Timer Screen -->
+    <div id="timerScreen" class="timer hidden">
+      <div class="clock-display">
+        <div class="clock-time" id="clockTime">00:000:00:00:00</div>
+        <div class="clock-label">YEARS : DAYS : HOURS : MIN : SEC</div>
+        <div class="timer-title">⌛ Time Remaining</div>
+      </div>
+      
+      <div class="progress-section">
+        <div class="progress-bar">
+          <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+        </div>
+        <div class="progress-text" id="progressText">Life Lived: 0.00%</div>
+      </div>
+      
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-value" id="currentAge">0</div>
+          <div class="stat-label">AGE</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="daysLeft">0</div>
+          <div class="stat-label">DAYS LEFT</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="hoursLeft">0</div>
+          <div class="stat-label">HOURS LEFT</div>
+        </div>
+      </div>
+      
+      <button class="secondary" onclick="showSettings()">⚙️ Change Settings</button>
+    </div>
+  </div>
+
+  <script>
+    const STORAGE_KEY_BD = 'lifeTimer_birthdate';
+    const STORAGE_KEY_LE = 'lifeTimer_lifeExpectancy';
+    
+    let timerInterval;
+    
+    // Initialize
+    function init() {
+      // Set max date to today
+      document.getElementById('birthdate').max = new Date().toISOString().split('T')[0];
+      
+      // Load saved data
+      const savedBD = localStorage.getItem(STORAGE_KEY_BD);
+      const savedLE = localStorage.getItem(STORAGE_KEY_LE);
+      
+      if (savedBD && savedLE) {
+        startTimer(savedBD, parseFloat(savedLE));
+      } else {
+        showSetup();
+      }
+      
+      // Country selector change
+      document.getElementById('country').addEventListener('change', function() {
+        const customDiv = document.getElementById('customExpectancy');
+        if (this.value === 'custom') {
+          customDiv.classList.remove('hidden');
+        } else {
+          customDiv.classList.add('hidden');
+        }
+      });
+    }
+    
+    function showSetup() {
+      document.getElementById('setupScreen').classList.remove('hidden');
+      document.getElementById('timerScreen').classList.add('hidden');
+      if (timerInterval) clearInterval(timerInterval);
+    }
+    
+    function showSettings() {
+      const savedBD = localStorage.getItem(STORAGE_KEY_BD);
+      const savedLE = localStorage.getItem(STORAGE_KEY_LE);
+      
+      if (savedBD) {
+        document.getElementById('birthdate').value = savedBD;
+      }
+      
+      const countrySelect = document.getElementById('country');
+      const matchingOption = Array.from(countrySelect.options).find(opt => opt.value === savedLE);
+      
+      if (matchingOption) {
+        countrySelect.value = savedLE;
+      } else {
+        countrySelect.value = 'custom';
+        document.getElementById('customExpectancy').classList.remove('hidden');
+        document.getElementById('customYears').value = savedLE;
+      }
+      
+      showSetup();
+    }
+    
+    function saveSettings() {
+      const birthdate = document.getElementById('birthdate').value;
+      if (!birthdate) {
+        alert('Please select your birthdate');
+        return;
+      }
+      
+      let lifeExpectancy;
+      const countryValue = document.getElementById('country').value;
+      
+      if (countryValue === 'custom') {
+        lifeExpectancy = parseFloat(document.getElementById('customYears').value);
+      } else {
+        lifeExpectancy = parseFloat(countryValue);
+      }
+      
+      // Save to localStorage
+      localStorage.setItem(STORAGE_KEY_BD, birthdate);
+      localStorage.setItem(STORAGE_KEY_LE, lifeExpectancy.toString());
+      
+      startTimer(birthdate, lifeExpectancy);
+    }
+    
+    function startTimer(birthdate, lifeExpectancy) {
+      document.getElementById('setupScreen').classList.add('hidden');
+      document.getElementById('timerScreen').classList.remove('hidden');
+      
+      const birthDate = new Date(birthdate + 'T00:00:00');
+      const endOfLife = new Date(birthDate.getTime() + (lifeExpectancy * 365.25 * 24 * 60 * 60 * 1000));
+      
+      function updateTimer() {
+        const now = new Date();
+        const lived = now - birthDate;
+        const remaining = endOfLife - now;
+        
+        if (remaining <= 0) {
+          document.getElementById('clockTime').textContent = '00:000:00:00:00';
+          document.getElementById('progressFill').style.width = '100%';
+          document.getElementById('progressText').textContent = 'Life Lived: 100.00%';
+          clearInterval(timerInterval);
+          return;
+        }
+        
+        // Calculate time components
+        const totalSeconds = Math.floor(remaining / 1000);
+        const daysTotal = Math.floor(totalSeconds / 86400);
+        const years = Math.floor(daysTotal / 365);
+        const days = daysTotal % 365;
+        const hours = Math.floor((totalSeconds % 86400) / 3600);
+        const minutes = Math.floor((totalSeconds % 3600) / 60);
+        const seconds = totalSeconds % 60;
+        
+        // Format display
+        const timeString = `${String(years).padStart(2, '0')}:${String(days).padStart(3, '0')}:${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+        document.getElementById('clockTime').textContent = timeString;
+        
+        // Calculate progress
+        const totalLife = endOfLife - birthDate;
+        const livedPercent = (lived / totalLife) * 100;
+        document.getElementById('progressFill').style.width = livedPercent.toFixed(2) + '%';
+        document.getElementById('progressText').textContent = `Life Lived: ${livedPercent.toFixed(2)}%`;
+        
+        // Update stats
+        const currentAge = Math.floor((now - birthDate) / (365.25 * 24 * 60 * 60 * 1000));
+        document.getElementById('currentAge').textContent = currentAge;
+        document.getElementById('daysLeft').textContent = daysTotal.toLocaleString();
+        document.getElementById('hoursLeft').textContent = Math.floor(totalSeconds / 3600).toLocaleString();
+      }
+      
+      updateTimer();
+      timerInterval = setInterval(updateTimer, 1000);
+    }
+    
+    // Register service worker
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('./sw.js')
+        .then(() => console.log('Service Worker registered'))
+        .catch(err => console.log('Service Worker registration failed:', err));
+    }
+    
+    // Initialize on load
+    init();
+  </script>
+</body>
+</html>
