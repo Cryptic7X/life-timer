@@ -11,6 +11,10 @@
   
   <title>Life Timer ⏳</title>
   
+  <link rel="manifest" href="./manifest.json">
+  <link rel="icon" type="image/png" href="./icon-192.png">
+  <link rel="apple-touch-icon" href="./icon-192.png">
+  
   <style>
     * {
       margin: 0;
@@ -152,7 +156,7 @@
       animation: fadeIn 0.5s ease;
     }
     
-    /* Clock Display - Red Theme with Dimmer Glow */
+    /* More Rectangular Clock Display - Red Theme with Dimmer Glow */
     .clock-display {
       background: #000000;
       border: 3px solid #ff6b6b;
@@ -368,7 +372,7 @@
 <body>
   <div class="container">
     <!-- Setup Screen -->
-    <div id="setupScreen" class="setup">
+    <div id="setupScreen" class="setup hidden">
       <h1>⏳ Life Timer Setup</h1>
       <p>Set your birthdate once. Saved permanently on this device.</p>
       
@@ -507,6 +511,7 @@
         lifeExpectancy = parseFloat(countryValue);
       }
       
+      // Determine timezone: UTC for Global Average, LOCAL for all others
       let timezone = 'local';
       if (countryValue === '73.4') {
         timezone = 'utc';
@@ -527,15 +532,17 @@
       let birthDate;
       
       if (timezone === 'utc') {
+        // UTC midnight (for Global Average)
         birthDate = new Date(Date.UTC(parseInt(year), parseInt(month) - 1, parseInt(day), 0, 0, 0, 0));
-        console.log('Using UTC timezone');
+        console.log('Using UTC timezone - Day changes at 00:00 UTC');
       } else {
+        // LOCAL midnight (IST for India, your local time for others)
         birthDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day), 0, 0, 0, 0);
-        console.log('Using LOCAL (IST) timezone');
+        console.log('Using LOCAL timezone - Day changes at 12:00 AM your time');
       }
       
-      console.log('Birth Date:', birthDate);
-      console.log('Current Timezone:', timezone);
+      console.log('Birth Date:', birthDate.toLocaleString());
+      console.log('Your Timezone Offset:', new Date().getTimezoneOffset() / -60, 'hours from UTC');
       
       const endOfLife = new Date(birthDate.getTime() + (lifeExpectancy * 365.25 * 24 * 60 * 60 * 1000));
       
@@ -576,6 +583,12 @@
       
       updateTimer();
       timerInterval = setInterval(updateTimer, 1000);
+    }
+    
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('./sw.js')
+        .then(() => console.log('Service Worker registered'))
+        .catch(err => console.log('Service Worker registration failed:', err));
     }
     
     init();
