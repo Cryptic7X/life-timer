@@ -521,7 +521,11 @@
       document.getElementById('setupScreen').classList.add('hidden');
       document.getElementById('timerScreen').classList.remove('hidden');
       
-      const birthDate = new Date(birthdate + 'T00:00:00');
+      // FIX: Create birthdate at LOCAL midnight (not UTC)
+      const [year, month, day] = birthdate.split('-');
+      const birthDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day), 0, 0, 0, 0);
+      
+      // Calculate end of life in local timezone
       const endOfLife = new Date(birthDate.getTime() + (lifeExpectancy * 365.25 * 24 * 60 * 60 * 1000));
       
       function updateTimer() {
@@ -562,6 +566,7 @@
       updateTimer();
       timerInterval = setInterval(updateTimer, 1000);
     }
+    
     
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('./sw.js')
