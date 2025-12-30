@@ -73,14 +73,6 @@
       font-weight: 500;
     }
     
-    .label-help {
-      display: block;
-      margin-top: 5px;
-      font-size: 0.8rem;
-      color: #6b7280;
-      font-weight: 400;
-    }
-    
     input[type="date"],
     select {
       width: 100%;
@@ -156,6 +148,11 @@
       background: #252836;
       border-color: #4a5568;
       box-shadow: none;
+    }
+    
+    button.danger {
+      background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+      margin-top: 12px;
     }
     
     /* Timer Screen */
@@ -409,6 +406,7 @@
       </div>
       
       <button onclick="saveSettings()">🕐 Start Clock</button>
+      <button class="danger" onclick="clearAllData()">🗑️ Clear All Data & Restart</button>
     </div>
     
     <!-- Timer Screen -->
@@ -448,10 +446,27 @@
   <script>
     const STORAGE_KEY_BD = 'lifeTimer_birthdate';
     const STORAGE_KEY_LE = 'lifeTimer_lifeExpectancy';
+    const VERSION_KEY = 'lifeTimer_version';
+    const CURRENT_VERSION = '2.0'; // Increment this to force refresh
     
     let timerInterval;
     
+    function clearAllData() {
+      if (confirm('Are you sure? This will delete all your settings and restart the timer.')) {
+        localStorage.clear();
+        location.reload();
+      }
+    }
+    
     function init() {
+      // Check version - force refresh if outdated
+      const savedVersion = localStorage.getItem(VERSION_KEY);
+      if (savedVersion !== CURRENT_VERSION) {
+        console.log('⚠️ Version mismatch detected - clearing old data');
+        localStorage.clear();
+        localStorage.setItem(VERSION_KEY, CURRENT_VERSION);
+      }
+      
       document.getElementById('birthdate').max = new Date().toISOString().split('T')[0];
       
       const savedBD = localStorage.getItem(STORAGE_KEY_BD);
@@ -519,7 +534,10 @@
       
       localStorage.setItem(STORAGE_KEY_BD, birthdate);
       localStorage.setItem(STORAGE_KEY_LE, lifeExpectancy.toString());
+      localStorage.setItem(VERSION_KEY, CURRENT_VERSION);
       
+      // Force reload timer with new data
+      if (timerInterval) clearInterval(timerInterval);
       startTimer(birthdate, lifeExpectancy);
     }
     
@@ -529,18 +547,27 @@
       
       const [year, month, day] = birthdate.split('-');
       
-      // SIMPLE FIX: Always use LOCAL timezone (your device's IST)
-      // This ensures day changes at midnight YOUR time
+      // Use LOCAL timezone - day changes at midnight YOUR time (IST)
       const birthDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day), 0, 0, 0, 0);
       
-      console.log('==================== DEBUG ====================');
+      const now = new Date();
+      console.log('========== LIFE TIMER DEBUG (v2.0) ==========');
+      console.log('Current Time:', now.toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }));
+      console.log('Current Time (Full):', now.toString());
+      console.log('Your Timezone:', Intl.DateTimeFormat().resolvedOptions().timeZone);
+      console.log('Timezone Offset:', -now.getTimezoneOffset() / 60, 'hours from UTC');
+      console.log('');
       console.log('Birthdate Input:', birthdate);
-      console.log('Birth Date Object:', birthDate.toString());
-      console.log('Birth Date (Local):', birthDate.toLocaleString());
-      console.log('Current Time:', new Date().toLocaleString());
-      console.log('Your Timezone Offset:', -new Date().getTimezoneOffset() / 60, 'hours from UTC');
-      console.log('Day will change at: 12:00 AM your local time (IST)');
-      console.log('==============================================');
+      console.log('Birth Date Object:', birthDate.toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }));
+      console.log('Birth Date (Full):', birthDate.toString());
+      console.log('');
+      console.log('Time Since Birth (ms):', now.getTime() - birthDate.getTime());
+      console.log('Days Since Birth:', Math.floor((now.getTime() - birthDate.getTime()) / (1000 * 60 * 60 * 24)));
+      console.log('Hours in current day:', now.getHours());
+      console.log('Hours until next day:', 24 - now.getHours());
+      console.log('');
+      console.log('✅ Day counter will change at: 12:00 AM IST');
+      console.log('=============================================');
       
       const endOfLife = new Date(birthDate.getTime() + (lifeExpectancy * 365.25 * 24 * 60 * 60 * 1000));
       
