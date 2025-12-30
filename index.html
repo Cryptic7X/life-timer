@@ -403,34 +403,6 @@
         </select>
       </div>
       
-      <div class="form-group">
-        <label for="timezone">
-          Timezone for day counter
-          <span class="label-help">When should the day counter reset?</span>
-        </label>
-        <select id="timezone">
-          <option value="local">My Device Time (Recommended)</option>
-          <option value="IST">Indian Standard Time (IST - UTC+5:30)</option>
-          <option value="UTC">Universal Time (UTC+0)</option>
-          <option value="EST">US Eastern Time (EST - UTC-5)</option>
-          <option value="CST">US Central Time (CST - UTC-6)</option>
-          <option value="MST">US Mountain Time (MST - UTC-7)</option>
-          <option value="PST">US Pacific Time (PST - UTC-8)</option>
-          <option value="GMT">London (GMT/BST - UTC+0/+1)</option>
-          <option value="CET">Central Europe (CET - UTC+1)</option>
-          <option value="EET">Eastern Europe (EET - UTC+2)</option>
-          <option value="MSK">Moscow (MSK - UTC+3)</option>
-          <option value="GST">Gulf Standard (GST - UTC+4)</option>
-          <option value="PKT">Pakistan Time (PKT - UTC+5)</option>
-          <option value="BST">Bangladesh Time (BST - UTC+6)</option>
-          <option value="ICT">Indochina Time (ICT - UTC+7)</option>
-          <option value="CST_CHINA">China Standard (CST - UTC+8)</option>
-          <option value="JST">Japan Standard (JST - UTC+9)</option>
-          <option value="AEST">Australian Eastern (AEST - UTC+10)</option>
-          <option value="NZST">New Zealand (NZST - UTC+12)</option>
-        </select>
-      </div>
-      
       <div class="form-group hidden" id="customExpectancy">
         <label for="customYears">Custom Years</label>
         <input type="number" id="customYears" min="50" max="100" step="0.1" value="73.4">
@@ -476,42 +448,17 @@
   <script>
     const STORAGE_KEY_BD = 'lifeTimer_birthdate';
     const STORAGE_KEY_LE = 'lifeTimer_lifeExpectancy';
-    const STORAGE_KEY_TZ = 'lifeTimer_timezone';
     
     let timerInterval;
-    
-    // ACCURATE Timezone offsets from UTC (based on timeanddate.com and Wikipedia)
-    const timezoneOffsets = {
-      'local': null,
-      'IST': 5.5,          // India Standard Time UTC+5:30
-      'UTC': 0,            // Universal Time
-      'EST': -5,           // US Eastern Standard Time UTC-5
-      'CST': -6,           // US Central Standard Time UTC-6
-      'MST': -7,           // US Mountain Standard Time UTC-7
-      'PST': -8,           // US Pacific Standard Time UTC-8
-      'GMT': 0,            // Greenwich Mean Time UTC+0
-      'CET': 1,            // Central European Time UTC+1
-      'EET': 2,            // Eastern European Time UTC+2
-      'MSK': 3,            // Moscow Time UTC+3
-      'GST': 4,            // Gulf Standard Time UTC+4
-      'PKT': 5,            // Pakistan Standard Time UTC+5
-      'BST': 6,            // Bangladesh Standard Time UTC+6
-      'ICT': 7,            // Indochina Time UTC+7
-      'CST_CHINA': 8,      // China Standard Time UTC+8
-      'JST': 9,            // Japan Standard Time UTC+9
-      'AEST': 10,          // Australian Eastern Standard Time UTC+10
-      'NZST': 12           // New Zealand Standard Time UTC+12
-    };
     
     function init() {
       document.getElementById('birthdate').max = new Date().toISOString().split('T')[0];
       
       const savedBD = localStorage.getItem(STORAGE_KEY_BD);
       const savedLE = localStorage.getItem(STORAGE_KEY_LE);
-      const savedTZ = localStorage.getItem(STORAGE_KEY_TZ) || 'local';
       
       if (savedBD && savedLE) {
-        startTimer(savedBD, parseFloat(savedLE), savedTZ);
+        startTimer(savedBD, parseFloat(savedLE));
       } else {
         showSetup();
       }
@@ -535,14 +482,9 @@
     function showSettings() {
       const savedBD = localStorage.getItem(STORAGE_KEY_BD);
       const savedLE = localStorage.getItem(STORAGE_KEY_LE);
-      const savedTZ = localStorage.getItem(STORAGE_KEY_TZ) || 'local';
       
       if (savedBD) {
         document.getElementById('birthdate').value = savedBD;
-      }
-      
-      if (savedTZ) {
-        document.getElementById('timezone').value = savedTZ;
       }
       
       const countrySelect = document.getElementById('country');
@@ -575,61 +517,30 @@
         lifeExpectancy = parseFloat(countryValue);
       }
       
-      const timezone = document.getElementById('timezone').value;
-      
       localStorage.setItem(STORAGE_KEY_BD, birthdate);
       localStorage.setItem(STORAGE_KEY_LE, lifeExpectancy.toString());
-      localStorage.setItem(STORAGE_KEY_TZ, timezone);
       
-      startTimer(birthdate, lifeExpectancy, timezone);
+      startTimer(birthdate, lifeExpectancy);
     }
     
-    function startTimer(birthdate, lifeExpectancy, timezone = 'local') {
+    function startTimer(birthdate, lifeExpectancy) {
       document.getElementById('setupScreen').classList.add('hidden');
       document.getElementById('timerScreen').classList.remove('hidden');
       
       const [year, month, day] = birthdate.split('-');
-      let birthDate;
       
-      if (timezone === 'local' || timezoneOffsets[timezone] === null) {
-        // LOCAL: Use browser's timezone
-        birthDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day), 0, 0, 0, 0);
-        console.log('🌍 Using LOCAL timezone (your device)');
-      } else {
-        // SPECIFIC TIMEZONE: Calculate midnight in that timezone
-        const offsetHours = timezoneOffsets[timezone];
-        
-        // Create UTC midnight for the date
-        const utcMidnight = Date.UTC(parseInt(year), parseInt(month) - 1, parseInt(day), 0, 0, 0, 0);
-        
-        // CORRECT FORMULA:
-        // IST is UTC+5:30, so midnight IST happens 5.5 hours BEFORE midnight UTC
-        // When it's 00:00 IST, it's 18:30 UTC (previous day)
-        // So we SUBTRACT the offset from UTC midnight
-        const tzMidnightUTC = utcMidnight - (offsetHours * 60 * 60 * 1000);
-        
-        birthDate = new Date(tzMidnightUTC);
-        
-        console.log(`🌍 Using ${timezone} timezone (UTC${offsetHours >= 0 ? '+' : ''}${offsetHours})`);
-        console.log('Day counter resets at midnight', timezone);
-      }
+      // SIMPLE FIX: Always use LOCAL timezone (your device's IST)
+      // This ensures day changes at midnight YOUR time
+      const birthDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day), 0, 0, 0, 0);
       
-      console.log('==================== TIMEZONE DEBUG ====================');
-      console.log('Timezone Selected:', timezone);
+      console.log('==================== DEBUG ====================');
       console.log('Birthdate Input:', birthdate);
-      console.log('Birth Date (Full):', birthDate.toString());
-      console.log('Birth Date (UTC):', birthDate.toUTCString());
+      console.log('Birth Date Object:', birthDate.toString());
       console.log('Birth Date (Local):', birthDate.toLocaleString());
-      console.log('Birth Timestamp:', birthDate.getTime());
-      console.log('');
-      console.log('Current Time (Full):', new Date().toString());
-      console.log('Current Time (UTC):', new Date().toUTCString());
-      console.log('Current Time (Local):', new Date().toLocaleString());
-      console.log('Current Timestamp:', new Date().getTime());
-      console.log('');
-      console.log('Time Since Birth (ms):', new Date().getTime() - birthDate.getTime());
-      console.log('Days Since Birth:', Math.floor((new Date().getTime() - birthDate.getTime()) / (1000 * 60 * 60 * 24)));
-      console.log('========================================================');
+      console.log('Current Time:', new Date().toLocaleString());
+      console.log('Your Timezone Offset:', -new Date().getTimezoneOffset() / 60, 'hours from UTC');
+      console.log('Day will change at: 12:00 AM your local time (IST)');
+      console.log('==============================================');
       
       const endOfLife = new Date(birthDate.getTime() + (lifeExpectancy * 365.25 * 24 * 60 * 60 * 1000));
       
