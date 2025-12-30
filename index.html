@@ -406,10 +406,10 @@
       <div class="form-group">
         <label for="timezone">
           Timezone for day counter
-          <span class="label-help">Choose when the day counter should reset</span>
+          <span class="label-help">When should the day counter reset?</span>
         </label>
         <select id="timezone">
-          <option value="local">My Local Time (Recommended)</option>
+          <option value="local">My Device Time (Recommended)</option>
           <option value="IST">Indian Standard Time (IST - UTC+5:30)</option>
           <option value="UTC">UTC/GMT (Universal Time)</option>
           <option value="EST">US Eastern Time (EST - UTC-5)</option>
@@ -469,12 +469,12 @@
     
     // Timezone offset mappings (hours from UTC)
     const timezoneOffsets = {
-      'local': null,  // Will use browser's local time
-      'IST': 5.5,     // UTC+5:30
-      'UTC': 0,       // UTC+0
-      'EST': -5,      // UTC-5
-      'PST': -8,      // UTC-8
-      'JST': 9        // UTC+9
+      'local': null,
+      'IST': 5.5,
+      'UTC': 0,
+      'EST': -5,
+      'PST': -8,
+      'JST': 9
     };
     
     function init() {
@@ -566,38 +566,39 @@
       let birthDate;
       
       if (timezone === 'local' || timezoneOffsets[timezone] === null) {
-        // Use browser's local timezone
+        // LOCAL: Use browser's timezone
         birthDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day), 0, 0, 0, 0);
-        console.log('✅ Using LOCAL timezone (your device time)');
-        console.log('Day counter resets at: 12:00 AM local time');
+        console.log('🌍 LOCAL TIMEZONE');
       } else {
-        // FIXED: Create birthdate at midnight in the specified timezone
-        // Convert timezone midnight to UTC, then to local Date object
+        // SPECIFIC TIMEZONE: Calculate midnight in that timezone
         const offsetHours = timezoneOffsets[timezone];
         
-        // Create UTC midnight for the birthdate
+        // Step 1: Create UTC midnight
         const utcMidnight = Date.UTC(parseInt(year), parseInt(month) - 1, parseInt(day), 0, 0, 0, 0);
         
-        // Adjust for timezone: subtract offset to get the UTC time that represents midnight in that timezone
-        // Example: IST midnight (UTC+5:30) = UTC time - 5.5 hours
-        const adjustedUTC = utcMidnight - (offsetHours * 60 * 60 * 1000);
+        // Step 2: Adjust for timezone
+        // IST is UTC+5:30, so when it's midnight IST, UTC time is 5.5 hours BEHIND
+        // Therefore: UTC time = IST time - offset
+        // To get the UTC timestamp of "midnight IST", we add the offset
+        const tzMidnightUTC = utcMidnight + (offsetHours * 60 * 60 * 1000);
         
-        birthDate = new Date(adjustedUTC);
+        birthDate = new Date(tzMidnightUTC);
         
-        console.log(`✅ Using ${timezone} timezone (UTC${offsetHours >= 0 ? '+' : ''}${offsetHours})`);
-        console.log(`Day counter resets at: 12:00 AM ${timezone}`);
+        console.log(`🌍 ${timezone} TIMEZONE (UTC${offsetHours >= 0 ? '+' : ''}${offsetHours})`);
       }
       
-      console.log('========== TIMEZONE DEBUG ==========');
-      console.log('Selected Timezone:', timezone);
-      console.log('Birth Date String:', birthdate);
-      console.log('Birth Date Object (UTC):', birthDate.toUTCString());
-      console.log('Birth Date Object (Local):', birthDate.toLocaleString());
-      console.log('Birth Date Timestamp:', birthDate.getTime());
+      console.log('==================== DEBUG ====================');
+      console.log('Timezone Selected:', timezone);
+      console.log('Birthdate Input:', birthdate);
+      console.log('Birth Date (Full):', birthDate.toString());
+      console.log('Birth Date (UTC):', birthDate.toUTCString());
+      console.log('Birth Date (Local):', birthDate.toLocaleString());
+      console.log('Birth Timestamp:', birthDate.getTime());
       console.log('Current Time:', new Date().toLocaleString());
       console.log('Current Timestamp:', new Date().getTime());
-      console.log('Time Difference (ms):', new Date().getTime() - birthDate.getTime());
-      console.log('====================================');
+      console.log('Difference (ms):', new Date().getTime() - birthDate.getTime());
+      console.log('Difference (days):', Math.floor((new Date().getTime() - birthDate.getTime()) / (1000 * 60 * 60 * 24)));
+      console.log('================================================');
       
       const endOfLife = new Date(birthDate.getTime() + (lifeExpectancy * 365.25 * 24 * 60 * 60 * 1000));
       
