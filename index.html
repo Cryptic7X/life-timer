@@ -73,6 +73,14 @@
       font-weight: 500;
     }
     
+    .label-help {
+      display: block;
+      margin-top: 5px;
+      font-size: 0.8rem;
+      color: #6b7280;
+      font-weight: 400;
+    }
+    
     input[type="date"],
     select {
       width: 100%;
@@ -148,11 +156,6 @@
       background: #252836;
       border-color: #4a5568;
       box-shadow: none;
-    }
-    
-    button.danger {
-      background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
-      margin-top: 12px;
     }
     
     /* Timer Screen */
@@ -400,13 +403,38 @@
         </select>
       </div>
       
+      <div class="form-group">
+        <label for="timezone">
+          Timezone for day counter
+          <span class="label-help">When should the day counter reset?</span>
+        </label>
+        <select id="timezone">
+          <option value="5.5">Indian Standard Time (IST - UTC+5:30)</option>
+          <option value="0">Universal Time (UTC+0)</option>
+          <option value="-5">US Eastern Time (EST - UTC-5)</option>
+          <option value="-6">US Central Time (CST - UTC-6)</option>
+          <option value="-7">US Mountain Time (MST - UTC-7)</option>
+          <option value="-8">US Pacific Time (PST - UTC-8)</option>
+          <option value="1">Central Europe (CET - UTC+1)</option>
+          <option value="2">Eastern Europe (EET - UTC+2)</option>
+          <option value="3">Moscow (MSK - UTC+3)</option>
+          <option value="4">Gulf Standard (GST - UTC+4)</option>
+          <option value="5">Pakistan Time (PKT - UTC+5)</option>
+          <option value="6">Bangladesh Time (BST - UTC+6)</option>
+          <option value="7">Indochina Time (ICT - UTC+7)</option>
+          <option value="8">China Standard (CST - UTC+8)</option>
+          <option value="9">Japan Standard (JST - UTC+9)</option>
+          <option value="10">Australian Eastern (AEST - UTC+10)</option>
+          <option value="12">New Zealand (NZST - UTC+12)</option>
+        </select>
+      </div>
+      
       <div class="form-group hidden" id="customExpectancy">
         <label for="customYears">Custom Years</label>
         <input type="number" id="customYears" min="50" max="100" step="0.1" value="73.4">
       </div>
       
       <button onclick="saveSettings()">🕐 Start Clock</button>
-      <button class="danger" onclick="clearAllData()">🗑️ Clear All Data & Restart</button>
     </div>
     
     <!-- Timer Screen -->
@@ -446,34 +474,20 @@
   <script>
     const STORAGE_KEY_BD = 'lifeTimer_birthdate';
     const STORAGE_KEY_LE = 'lifeTimer_lifeExpectancy';
-    const VERSION_KEY = 'lifeTimer_version';
-    const CURRENT_VERSION = '2.0'; // Increment this to force refresh
+    const STORAGE_KEY_TZ = 'lifeTimer_timezone';
     
     let timerInterval;
-    
-    function clearAllData() {
-      if (confirm('Are you sure? This will delete all your settings and restart the timer.')) {
-        localStorage.clear();
-        location.reload();
-      }
-    }
+    let currentTimezoneOffset = 5.5; // Store globally
     
     function init() {
-      // Check version - force refresh if outdated
-      const savedVersion = localStorage.getItem(VERSION_KEY);
-      if (savedVersion !== CURRENT_VERSION) {
-        console.log('⚠️ Version mismatch detected - clearing old data');
-        localStorage.clear();
-        localStorage.setItem(VERSION_KEY, CURRENT_VERSION);
-      }
-      
       document.getElementById('birthdate').max = new Date().toISOString().split('T')[0];
       
       const savedBD = localStorage.getItem(STORAGE_KEY_BD);
       const savedLE = localStorage.getItem(STORAGE_KEY_LE);
+      const savedTZ = localStorage.getItem(STORAGE_KEY_TZ) || '5.5';
       
       if (savedBD && savedLE) {
-        startTimer(savedBD, parseFloat(savedLE));
+        startTimer(savedBD, parseFloat(savedLE), parseFloat(savedTZ));
       } else {
         showSetup();
       }
@@ -497,9 +511,14 @@
     function showSettings() {
       const savedBD = localStorage.getItem(STORAGE_KEY_BD);
       const savedLE = localStorage.getItem(STORAGE_KEY_LE);
+      const savedTZ = localStorage.getItem(STORAGE_KEY_TZ) || '5.5';
       
       if (savedBD) {
         document.getElementById('birthdate').value = savedBD;
+      }
+      
+      if (savedTZ) {
+        document.getElementById('timezone').value = savedTZ;
       }
       
       const countrySelect = document.getElementById('country');
@@ -532,42 +551,75 @@
         lifeExpectancy = parseFloat(countryValue);
       }
       
+      const timezone = parseFloat(document.getElementById('timezone').value);
+      
       localStorage.setItem(STORAGE_KEY_BD, birthdate);
       localStorage.setItem(STORAGE_KEY_LE, lifeExpectancy.toString());
-      localStorage.setItem(VERSION_KEY, CURRENT_VERSION);
+      localStorage.setItem(STORAGE_KEY_TZ, timezone.toString());
       
-      // Force reload timer with new data
-      if (timerInterval) clearInterval(timerInterval);
-      startTimer(birthdate, lifeExpectancy);
+      startTimer(birthdate, lifeExpectancy, timezone);
     }
     
-    function startTimer(birthdate, lifeExpectancy) {
+    // Helper function: Get current time in specific timezone (in milliseconds since epoch)
+    function getCurrentTimeInTimezone(tzOffsetHours) {
+      const now = new Date();
+      const utcTime = now.getTime() + (now.getTimezoneOffset() * 60000);
+      return utcTime + (tzOffsetHours * 3600000);
+    }
+    
+    // Helper function: Get midnight today in specific timezone
+    function getMidnightTodayInTimezone(tzOffsetHours) {
+      const nowInTz = getCurrentTimeInTimezone(tzOffsetHours);
+      const dateInTz = new Date(nowInTz);
+      
+      // Get year, month, day in that timezone
+      const year = dateInTz.getUTCFullYear();
+      const month = dateInTz.getUTCMonth();
+      const day = dateInTz.getUTCDate();
+      
+      // Create midnight in that timezone
+      const midnightUTC = Date.UTC(year, month, day, 0, 0, 0, 0);
+      
+      // Convert back: subtract timezone offset to get the UTC time when it's midnight there
+      return midnightUTC - (tzOffsetHours * 3600000);
+    }
+    
+    // Helper function: Get next midnight in specific timezone
+    function getNextMidnightInTimezone(tzOffsetHours) {
+      const midnightToday = getMidnightTodayInTimezone(tzOffsetHours);
+      const now = new Date().getTime();
+      
+      if (now >= midnightToday) {
+        // We've passed midnight today, return tomorrow's midnight
+        return midnightToday + (24 * 3600000);
+      } else {
+        // Haven't reached midnight yet
+        return midnightToday;
+      }
+    }
+    
+    function startTimer(birthdate, lifeExpectancy, tzOffsetHours) {
       document.getElementById('setupScreen').classList.add('hidden');
       document.getElementById('timerScreen').classList.remove('hidden');
       
+      currentTimezoneOffset = tzOffsetHours;
+      
       const [year, month, day] = birthdate.split('-');
       
-      // Use LOCAL timezone - day changes at midnight YOUR time (IST)
-      const birthDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day), 0, 0, 0, 0);
+      // Calculate birthdate at midnight in the selected timezone
+      const birthdateUTC = Date.UTC(parseInt(year), parseInt(month) - 1, parseInt(day), 0, 0, 0, 0);
+      const birthDate = new Date(birthdateUTC - (tzOffsetHours * 3600000));
       
-      const now = new Date();
-      console.log('========== LIFE TIMER DEBUG (v2.0) ==========');
-      console.log('Current Time:', now.toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }));
-      console.log('Current Time (Full):', now.toString());
-      console.log('Your Timezone:', Intl.DateTimeFormat().resolvedOptions().timeZone);
-      console.log('Timezone Offset:', -now.getTimezoneOffset() / 60, 'hours from UTC');
-      console.log('');
+      console.log('==================== TIMEZONE DEBUG ====================');
+      console.log('Selected Timezone Offset: UTC' + (tzOffsetHours >= 0 ? '+' : '') + tzOffsetHours);
       console.log('Birthdate Input:', birthdate);
-      console.log('Birth Date Object:', birthDate.toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }));
-      console.log('Birth Date (Full):', birthDate.toString());
+      console.log('Birth Date Object:', birthDate.toUTCString());
+      console.log('Birth Timestamp:', birthDate.getTime());
       console.log('');
-      console.log('Time Since Birth (ms):', now.getTime() - birthDate.getTime());
-      console.log('Days Since Birth:', Math.floor((now.getTime() - birthDate.getTime()) / (1000 * 60 * 60 * 24)));
-      console.log('Hours in current day:', now.getHours());
-      console.log('Hours until next day:', 24 - now.getHours());
-      console.log('');
-      console.log('✅ Day counter will change at: 12:00 AM IST');
-      console.log('=============================================');
+      console.log('Current UTC Time:', new Date().toUTCString());
+      console.log('Current Time in Selected TZ:', new Date(getCurrentTimeInTimezone(tzOffsetHours)).toUTCString());
+      console.log('Next Midnight in Selected TZ:', new Date(getNextMidnightInTimezone(tzOffsetHours)).toUTCString());
+      console.log('========================================================');
       
       const endOfLife = new Date(birthDate.getTime() + (lifeExpectancy * 365.25 * 24 * 60 * 60 * 1000));
       
@@ -584,15 +636,26 @@
           return;
         }
         
-        const totalSeconds = Math.floor(remaining / 1000);
-        const daysTotal = Math.floor(totalSeconds / 86400);
-        const years = Math.floor(daysTotal / 365);
-        const days = daysTotal % 365;
-        const hours = Math.floor((totalSeconds % 86400) / 3600);
-        const minutes = Math.floor((totalSeconds % 3600) / 60);
-        const seconds = totalSeconds % 60;
+        // Calculate time until next midnight in selected timezone
+        const nextMidnight = getNextMidnightInTimezone(currentTimezoneOffset);
+        const timeUntilMidnight = nextMidnight - now.getTime();
         
-        const timeString = `${String(years).padStart(2, '0')}:${String(days).padStart(3, '0')}:${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+        // Calculate total days passed in the selected timezone
+        const midnightToday = getMidnightTodayInTimezone(currentTimezoneOffset);
+        const daysSinceBirth = Math.floor((midnightToday - birthDate.getTime()) / (24 * 3600000));
+        const totalDaysInLife = Math.floor((endOfLife.getTime() - birthDate.getTime()) / (24 * 3600000));
+        const daysRemaining = totalDaysInLife - daysSinceBirth;
+        
+        // Calculate the time components for today
+        const hoursUntilMidnight = Math.floor(timeUntilMidnight / 3600000);
+        const minutesUntilMidnight = Math.floor((timeUntilMidnight % 3600000) / 60000);
+        const secondsUntilMidnight = Math.floor((timeUntilMidnight % 60000) / 1000);
+        
+        // Calculate years and remaining days
+        const years = Math.floor(daysRemaining / 365);
+        const days = daysRemaining % 365;
+        
+        const timeString = `${String(years).padStart(2, '0')}:${String(days).padStart(3, '0')}:${String(hoursUntilMidnight).padStart(2, '0')}:${String(minutesUntilMidnight).padStart(2, '0')}:${String(secondsUntilMidnight).padStart(2, '0')}`;
         document.getElementById('clockTime').textContent = timeString;
         
         const totalLife = endOfLife - birthDate;
@@ -602,8 +665,8 @@
         
         const currentAge = Math.floor((now - birthDate) / (365.25 * 24 * 60 * 60 * 1000));
         document.getElementById('currentAge').textContent = currentAge;
-        document.getElementById('daysLeft').textContent = daysTotal.toLocaleString();
-        document.getElementById('hoursLeft').textContent = Math.floor(totalSeconds / 3600).toLocaleString();
+        document.getElementById('daysLeft').textContent = daysRemaining.toLocaleString();
+        document.getElementById('hoursLeft').textContent = (daysRemaining * 24 + hoursUntilMidnight).toLocaleString();
       }
       
       updateTimer();
