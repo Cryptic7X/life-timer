@@ -410,11 +410,11 @@
         </label>
         <select id="timezone">
           <option value="local">My Local Time (Recommended)</option>
-          <option value="IST">Indian Standard Time (IST)</option>
+          <option value="IST">Indian Standard Time (IST - UTC+5:30)</option>
           <option value="UTC">UTC/GMT (Universal Time)</option>
-          <option value="EST">US Eastern Time (EST)</option>
-          <option value="PST">US Pacific Time (PST)</option>
-          <option value="JST">Japan Standard Time (JST)</option>
+          <option value="EST">US Eastern Time (EST - UTC-5)</option>
+          <option value="PST">US Pacific Time (PST - UTC-8)</option>
+          <option value="JST">Japan Standard Time (JST - UTC+9)</option>
         </select>
       </div>
       
@@ -571,16 +571,33 @@
         console.log('✅ Using LOCAL timezone (your device time)');
         console.log('Day counter resets at: 12:00 AM local time');
       } else {
-        // Use specific timezone offset
-        const offset = timezoneOffsets[timezone];
+        // FIXED: Create birthdate at midnight in the specified timezone
+        // Convert timezone midnight to UTC, then to local Date object
+        const offsetHours = timezoneOffsets[timezone];
+        
+        // Create UTC midnight for the birthdate
         const utcMidnight = Date.UTC(parseInt(year), parseInt(month) - 1, parseInt(day), 0, 0, 0, 0);
-        birthDate = new Date(utcMidnight - (offset * 60 * 60 * 1000));
-        console.log(`✅ Using ${timezone} timezone (UTC${offset >= 0 ? '+' : ''}${offset})`);
+        
+        // Adjust for timezone: subtract offset to get the UTC time that represents midnight in that timezone
+        // Example: IST midnight (UTC+5:30) = UTC time - 5.5 hours
+        const adjustedUTC = utcMidnight - (offsetHours * 60 * 60 * 1000);
+        
+        birthDate = new Date(adjustedUTC);
+        
+        console.log(`✅ Using ${timezone} timezone (UTC${offsetHours >= 0 ? '+' : ''}${offsetHours})`);
         console.log(`Day counter resets at: 12:00 AM ${timezone}`);
       }
       
-      console.log('Birth Date:', birthDate.toLocaleString());
+      console.log('========== TIMEZONE DEBUG ==========');
+      console.log('Selected Timezone:', timezone);
+      console.log('Birth Date String:', birthdate);
+      console.log('Birth Date Object (UTC):', birthDate.toUTCString());
+      console.log('Birth Date Object (Local):', birthDate.toLocaleString());
+      console.log('Birth Date Timestamp:', birthDate.getTime());
       console.log('Current Time:', new Date().toLocaleString());
+      console.log('Current Timestamp:', new Date().getTime());
+      console.log('Time Difference (ms):', new Date().getTime() - birthDate.getTime());
+      console.log('====================================');
       
       const endOfLife = new Date(birthDate.getTime() + (lifeExpectancy * 365.25 * 24 * 60 * 60 * 1000));
       
