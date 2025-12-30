@@ -11,10 +11,6 @@
   
   <title>Life Timer ⏳</title>
   
-  <link rel="manifest" href="./manifest.json">
-  <link rel="icon" type="image/png" href="./icon-192.png">
-  <link rel="apple-touch-icon" href="./icon-192.png">
-  
   <style>
     * {
       margin: 0;
@@ -156,15 +152,15 @@
       animation: fadeIn 0.5s ease;
     }
     
-    /* More Rectangular Clock Display - Red Theme with Dimmer Glow */
+    /* Clock Display - Red Theme with Dimmer Glow */
     .clock-display {
       background: #000000;
       border: 3px solid #ff6b6b;
       border-radius: 20px;
-      padding: 35px 50px;        /* More horizontal padding, less vertical */
+      padding: 35px 50px;
       margin-bottom: 20px;
       box-shadow: 
-        0 0 15px rgba(255, 107, 107, 0.25),    /* Much dimmer outer glow */
+        0 0 15px rgba(255, 107, 107, 0.25),
         0 0 30px rgba(255, 107, 107, 0.15),
         inset 0 0 10px rgba(255, 107, 107, 0.03);
       position: relative;
@@ -172,14 +168,14 @@
     }
     
     .clock-time {
-      font-size: 3rem;           /* Slightly smaller */
+      font-size: 3rem;
       font-weight: 800;
       letter-spacing: 4px;
       color: #ff6b6b;
       margin-bottom: 12px;
       font-variant-numeric: tabular-nums;
       text-shadow: 
-        0 0 5px rgba(255, 107, 107, 0.4),      /* Much dimmer glow */
+        0 0 5px rgba(255, 107, 107, 0.4),
         0 0 10px rgba(255, 107, 107, 0.3),
         0 0 15px rgba(255, 107, 107, 0.2),
         0 0 20px rgba(255, 107, 107, 0.1);
@@ -189,7 +185,6 @@
       line-height: 1.1;
     }
     
-    
     .clock-label {
       font-size: 0.75rem;
       color: #ff8a8a;
@@ -197,7 +192,7 @@
       font-weight: 600;
       position: relative;
       z-index: 1;
-      text-shadow: 0 0 5px rgba(255, 107, 107, 0.2);  /* Dimmer label glow */
+      text-shadow: 0 0 5px rgba(255, 107, 107, 0.2);
       margin-bottom: 6px;
     }
     
@@ -314,7 +309,6 @@
     }
     
     /* Responsive */
-    /* Responsive */
     @media (max-width: 500px) {
       .container {
         max-width: 100%;
@@ -322,19 +316,19 @@
       }
       
       .clock-display {
-        padding: 25px 20px;          /* Reduced padding */
+        padding: 25px 20px;
         border-radius: 16px;
       }
       
       .clock-time {
-        font-size: 2rem;             /* Smaller font for mobile */
-        letter-spacing: 1px;         /* Tighter letter spacing */
-        word-spacing: -2px;          /* Bring colons closer */
+        font-size: 2rem;
+        letter-spacing: 1px;
+        word-spacing: -2px;
       }
       
       .clock-label {
         font-size: 0.55rem;
-        letter-spacing: 1.5px;       /* Tighter spacing */
+        letter-spacing: 1.5px;
       }
       
       .timer-title {
@@ -361,7 +355,7 @@
     /* Extra small phones */
     @media (max-width: 360px) {
       .clock-time {
-        font-size: 1.7rem;           /* Even smaller for tiny screens */
+        font-size: 1.7rem;
         letter-spacing: 0px;
       }
       
@@ -374,7 +368,7 @@
 <body>
   <div class="container">
     <!-- Setup Screen -->
-    <div id="setupScreen" class="setup hidden">
+    <div id="setupScreen" class="setup">
       <h1>⏳ Life Timer Setup</h1>
       <p>Set your birthdate once. Saved permanently on this device.</p>
       
@@ -442,6 +436,7 @@
   <script>
     const STORAGE_KEY_BD = 'lifeTimer_birthdate';
     const STORAGE_KEY_LE = 'lifeTimer_lifeExpectancy';
+    const STORAGE_KEY_TZ = 'lifeTimer_timezone';
     
     let timerInterval;
     
@@ -450,9 +445,10 @@
       
       const savedBD = localStorage.getItem(STORAGE_KEY_BD);
       const savedLE = localStorage.getItem(STORAGE_KEY_LE);
+      const savedTZ = localStorage.getItem(STORAGE_KEY_TZ) || 'local';
       
       if (savedBD && savedLE) {
-        startTimer(savedBD, parseFloat(savedLE));
+        startTimer(savedBD, parseFloat(savedLE), savedTZ);
       } else {
         showSetup();
       }
@@ -511,21 +507,36 @@
         lifeExpectancy = parseFloat(countryValue);
       }
       
+      let timezone = 'local';
+      if (countryValue === '73.4') {
+        timezone = 'utc';
+      }
+      
       localStorage.setItem(STORAGE_KEY_BD, birthdate);
       localStorage.setItem(STORAGE_KEY_LE, lifeExpectancy.toString());
+      localStorage.setItem(STORAGE_KEY_TZ, timezone);
       
-      startTimer(birthdate, lifeExpectancy);
+      startTimer(birthdate, lifeExpectancy, timezone);
     }
     
-    function startTimer(birthdate, lifeExpectancy) {
+    function startTimer(birthdate, lifeExpectancy, timezone = 'local') {
       document.getElementById('setupScreen').classList.add('hidden');
       document.getElementById('timerScreen').classList.remove('hidden');
       
-      // FIX: Create birthdate at LOCAL midnight (not UTC)
       const [year, month, day] = birthdate.split('-');
-      const birthDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day), 0, 0, 0, 0);
+      let birthDate;
       
-      // Calculate end of life in local timezone
+      if (timezone === 'utc') {
+        birthDate = new Date(Date.UTC(parseInt(year), parseInt(month) - 1, parseInt(day), 0, 0, 0, 0));
+        console.log('Using UTC timezone');
+      } else {
+        birthDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day), 0, 0, 0, 0);
+        console.log('Using LOCAL (IST) timezone');
+      }
+      
+      console.log('Birth Date:', birthDate);
+      console.log('Current Timezone:', timezone);
+      
       const endOfLife = new Date(birthDate.getTime() + (lifeExpectancy * 365.25 * 24 * 60 * 60 * 1000));
       
       function updateTimer() {
@@ -565,13 +576,6 @@
       
       updateTimer();
       timerInterval = setInterval(updateTimer, 1000);
-    }
-    
-    
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('./sw.js')
-        .then(() => console.log('Service Worker registered'))
-        .catch(err => console.log('Service Worker registration failed:', err));
     }
     
     init();
