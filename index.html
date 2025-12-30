@@ -411,10 +411,23 @@
         <select id="timezone">
           <option value="local">My Device Time (Recommended)</option>
           <option value="IST">Indian Standard Time (IST - UTC+5:30)</option>
-          <option value="UTC">UTC/GMT (Universal Time)</option>
+          <option value="UTC">Universal Time (UTC+0)</option>
           <option value="EST">US Eastern Time (EST - UTC-5)</option>
+          <option value="CST">US Central Time (CST - UTC-6)</option>
+          <option value="MST">US Mountain Time (MST - UTC-7)</option>
           <option value="PST">US Pacific Time (PST - UTC-8)</option>
-          <option value="JST">Japan Standard Time (JST - UTC+9)</option>
+          <option value="GMT">London (GMT/BST - UTC+0/+1)</option>
+          <option value="CET">Central Europe (CET - UTC+1)</option>
+          <option value="EET">Eastern Europe (EET - UTC+2)</option>
+          <option value="MSK">Moscow (MSK - UTC+3)</option>
+          <option value="GST">Gulf Standard (GST - UTC+4)</option>
+          <option value="PKT">Pakistan Time (PKT - UTC+5)</option>
+          <option value="BST">Bangladesh Time (BST - UTC+6)</option>
+          <option value="ICT">Indochina Time (ICT - UTC+7)</option>
+          <option value="CST_CHINA">China Standard (CST - UTC+8)</option>
+          <option value="JST">Japan Standard (JST - UTC+9)</option>
+          <option value="AEST">Australian Eastern (AEST - UTC+10)</option>
+          <option value="NZST">New Zealand (NZST - UTC+12)</option>
         </select>
       </div>
       
@@ -467,14 +480,27 @@
     
     let timerInterval;
     
-    // Timezone offset mappings (hours from UTC)
+    // ACCURATE Timezone offsets from UTC (based on timeanddate.com and Wikipedia)
     const timezoneOffsets = {
       'local': null,
-      'IST': 5.5,
-      'UTC': 0,
-      'EST': -5,
-      'PST': -8,
-      'JST': 9
+      'IST': 5.5,          // India Standard Time UTC+5:30
+      'UTC': 0,            // Universal Time
+      'EST': -5,           // US Eastern Standard Time UTC-5
+      'CST': -6,           // US Central Standard Time UTC-6
+      'MST': -7,           // US Mountain Standard Time UTC-7
+      'PST': -8,           // US Pacific Standard Time UTC-8
+      'GMT': 0,            // Greenwich Mean Time UTC+0
+      'CET': 1,            // Central European Time UTC+1
+      'EET': 2,            // Eastern European Time UTC+2
+      'MSK': 3,            // Moscow Time UTC+3
+      'GST': 4,            // Gulf Standard Time UTC+4
+      'PKT': 5,            // Pakistan Standard Time UTC+5
+      'BST': 6,            // Bangladesh Standard Time UTC+6
+      'ICT': 7,            // Indochina Time UTC+7
+      'CST_CHINA': 8,      // China Standard Time UTC+8
+      'JST': 9,            // Japan Standard Time UTC+9
+      'AEST': 10,          // Australian Eastern Standard Time UTC+10
+      'NZST': 12           // New Zealand Standard Time UTC+12
     };
     
     function init() {
@@ -568,37 +594,42 @@
       if (timezone === 'local' || timezoneOffsets[timezone] === null) {
         // LOCAL: Use browser's timezone
         birthDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day), 0, 0, 0, 0);
-        console.log('🌍 LOCAL TIMEZONE');
+        console.log('🌍 Using LOCAL timezone (your device)');
       } else {
         // SPECIFIC TIMEZONE: Calculate midnight in that timezone
         const offsetHours = timezoneOffsets[timezone];
         
-        // Step 1: Create UTC midnight
+        // Create UTC midnight for the date
         const utcMidnight = Date.UTC(parseInt(year), parseInt(month) - 1, parseInt(day), 0, 0, 0, 0);
         
-        // Step 2: Adjust for timezone
-        // IST is UTC+5:30, so when it's midnight IST, UTC time is 5.5 hours BEHIND
-        // Therefore: UTC time = IST time - offset
-        // To get the UTC timestamp of "midnight IST", we add the offset
-        const tzMidnightUTC = utcMidnight + (offsetHours * 60 * 60 * 1000);
+        // CORRECT FORMULA:
+        // IST is UTC+5:30, so midnight IST happens 5.5 hours BEFORE midnight UTC
+        // When it's 00:00 IST, it's 18:30 UTC (previous day)
+        // So we SUBTRACT the offset from UTC midnight
+        const tzMidnightUTC = utcMidnight - (offsetHours * 60 * 60 * 1000);
         
         birthDate = new Date(tzMidnightUTC);
         
-        console.log(`🌍 ${timezone} TIMEZONE (UTC${offsetHours >= 0 ? '+' : ''}${offsetHours})`);
+        console.log(`🌍 Using ${timezone} timezone (UTC${offsetHours >= 0 ? '+' : ''}${offsetHours})`);
+        console.log('Day counter resets at midnight', timezone);
       }
       
-      console.log('==================== DEBUG ====================');
+      console.log('==================== TIMEZONE DEBUG ====================');
       console.log('Timezone Selected:', timezone);
       console.log('Birthdate Input:', birthdate);
       console.log('Birth Date (Full):', birthDate.toString());
       console.log('Birth Date (UTC):', birthDate.toUTCString());
       console.log('Birth Date (Local):', birthDate.toLocaleString());
       console.log('Birth Timestamp:', birthDate.getTime());
-      console.log('Current Time:', new Date().toLocaleString());
+      console.log('');
+      console.log('Current Time (Full):', new Date().toString());
+      console.log('Current Time (UTC):', new Date().toUTCString());
+      console.log('Current Time (Local):', new Date().toLocaleString());
       console.log('Current Timestamp:', new Date().getTime());
-      console.log('Difference (ms):', new Date().getTime() - birthDate.getTime());
-      console.log('Difference (days):', Math.floor((new Date().getTime() - birthDate.getTime()) / (1000 * 60 * 60 * 24)));
-      console.log('================================================');
+      console.log('');
+      console.log('Time Since Birth (ms):', new Date().getTime() - birthDate.getTime());
+      console.log('Days Since Birth:', Math.floor((new Date().getTime() - birthDate.getTime()) / (1000 * 60 * 60 * 24)));
+      console.log('========================================================');
       
       const endOfLife = new Date(birthDate.getTime() + (lifeExpectancy * 365.25 * 24 * 60 * 60 * 1000));
       
