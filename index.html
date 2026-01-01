@@ -656,15 +656,16 @@
       }
     }
     
-    function formatDateInTimezone(timestamp, tzOffsetHours) {
-      const dateInTz = new Date(timestamp + (tzOffsetHours * 3600000));
+    // NEW: Direct date formatting from timestamp WITHOUT adding timezone offset
+    function formatEndDate(timestampMs) {
+      const date = new Date(timestampMs);
       
       const months = ['January', 'February', 'March', 'April', 'May', 'June', 
                       'July', 'August', 'September', 'October', 'November', 'December'];
       
-      const year = dateInTz.getUTCFullYear();
-      const month = months[dateInTz.getUTCMonth()];
-      const day = dateInTz.getUTCDate();
+      const year = date.getUTCFullYear();
+      const month = months[date.getUTCMonth()];
+      const day = date.getUTCDate();
       
       const suffix = (day) => {
         if (day > 3 && day < 21) return 'th';
@@ -693,13 +694,12 @@
       function updateTimer() {
         const now = new Date();
         
-        // Calculate days remaining based on midnights in selected timezone
+        // Calculate days remaining
         const midnightToday = getMidnightTodayInTimezone(currentTimezoneOffset);
         const daysSinceBirth = Math.floor((midnightToday - birthDate.getTime()) / (24 * 3600000));
         const daysRemaining = totalDaysInLife - daysSinceBirth;
         
-        // Calculate the END DATE based on daysRemaining from today's midnight
-        // This ensures the timer and end date always match
+        // Calculate end date: midnightToday + daysRemaining
         const endOfLifeTimestamp = midnightToday + (daysRemaining * 24 * 3600000);
         const endOfLife = new Date(endOfLifeTimestamp);
         
@@ -715,8 +715,8 @@
           return;
         }
         
-        // Display the end date (dynamically updated to match timer)
-        const endDateFormatted = formatDateInTimezone(endOfLife.getTime(), currentTimezoneOffset);
+        // Format the end date WITHOUT adding timezone offset again
+        const endDateFormatted = formatEndDate(endOfLifeTimestamp);
         document.getElementById('endDateValue').textContent = endDateFormatted;
         document.getElementById('endDateTime').textContent = '00:00:00';
         
