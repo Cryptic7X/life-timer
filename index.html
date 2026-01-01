@@ -630,21 +630,22 @@
       return utcTime + (tzOffsetHours * 3600000);
     }
     
+    // Helper function: Get midnight on a specific date in timezone
+    function getMidnightInTimezone(year, month, day, tzOffsetHours) {
+      const midnightUTC = Date.UTC(year, month, day, 0, 0, 0, 0);
+      return midnightUTC - (tzOffsetHours * 3600000);
+    }
+    
     // Helper function: Get midnight today in specific timezone
     function getMidnightTodayInTimezone(tzOffsetHours) {
       const nowInTz = getCurrentTimeInTimezone(tzOffsetHours);
       const dateInTz = new Date(nowInTz);
       
-      // Get year, month, day in that timezone
       const year = dateInTz.getUTCFullYear();
       const month = dateInTz.getUTCMonth();
       const day = dateInTz.getUTCDate();
       
-      // Create midnight in that timezone
-      const midnightUTC = Date.UTC(year, month, day, 0, 0, 0, 0);
-      
-      // Convert back: subtract timezone offset to get the UTC time when it's midnight there
-      return midnightUTC - (tzOffsetHours * 3600000);
+      return getMidnightInTimezone(year, month, day, tzOffsetHours);
     }
     
     // Helper function: Get next midnight in specific timezone
@@ -653,10 +654,8 @@
       const now = new Date().getTime();
       
       if (now >= midnightToday) {
-        // We've passed midnight today, return tomorrow's midnight
         return midnightToday + (24 * 3600000);
       } else {
-        // Haven't reached midnight yet
         return midnightToday;
       }
     }
@@ -705,23 +704,25 @@
       const [year, month, day] = birthdate.split('-');
       
       // Calculate birthdate at midnight in the selected timezone
-      const birthdateUTC = Date.UTC(parseInt(year), parseInt(month) - 1, parseInt(day), 0, 0, 0, 0);
-      const birthDate = new Date(birthdateUTC - (tzOffsetHours * 3600000));
+      const birthDate = new Date(getMidnightInTimezone(parseInt(year), parseInt(month) - 1, parseInt(day), tzOffsetHours));
       
-      console.log('==================== TIMEZONE DEBUG ====================');
-      console.log('Selected Timezone Offset: UTC' + (tzOffsetHours >= 0 ? '+' : '') + tzOffsetHours);
-      console.log('Birthdate Input:', birthdate);
-      console.log('Birth Date Object:', birthDate.toUTCString());
-      console.log('Birth Timestamp:', birthDate.getTime());
-      console.log('');
-      console.log('Current UTC Time:', new Date().toUTCString());
-      console.log('Current Time in Selected TZ:', new Date(getCurrentTimeInTimezone(tzOffsetHours)).toUTCString());
-      console.log('Next Midnight in Selected TZ:', new Date(getNextMidnightInTimezone(tzOffsetHours)).toUTCString());
-      console.log('========================================================');
+      // Calculate total days in life expectancy
+      const totalDaysInLife = Math.round(lifeExpectancy * 365.25);
       
-      const endOfLife = new Date(birthDate.getTime() + (lifeExpectancy * 365.25 * 24 * 60 * 60 * 1000));
+      // Calculate end of life as midnight on the final day in selected timezone
+      // Start from birth midnight and add total days
+      const endOfLifeTimestamp = birthDate.getTime() + (totalDaysInLife * 24 * 3600000);
+      const endOfLife = new Date(endOfLifeTimestamp);
       
-      // Display the end date (only needs to be set once)
+      console.log('==================== SYNC DEBUG ====================');
+      console.log('Birthdate:', birthdate);
+      console.log('Birth Date (midnight in TZ):', birthDate.toUTCString());
+      console.log('Life Expectancy (years):', lifeExpectancy);
+      console.log('Total Days in Life:', totalDaysInLife);
+      console.log('End of Life (midnight):', endOfLife.toUTCString());
+      console.log('====================================================');
+      
+      // Display the end date (formatted in the selected timezone)
       const endDateFormatted = formatDateInTimezone(endOfLife.getTime(), tzOffsetHours);
       document.getElementById('endDateValue').textContent = endDateFormatted;
       
@@ -734,13 +735,13 @@
           document.getElementById('clockTime').textContent = '00:000:00:00:00';
           document.getElementById('progressFill').style.width = '100%';
           document.getElementById('progressText').textContent = 'Life Lived: 100.00%';
+          document.getElementById('endDateTime').textContent = '00:00:00';
           clearInterval(timerInterval);
           return;
         }
         
-        // Update end time display
-        const endTimeFormatted = formatTimeInTimezone(endOfLife.getTime(), tzOffsetHours);
-        document.getElementById('endDateTime').textContent = endTimeFormatted;
+        // Update end time display (always shows midnight 00:00:00)
+        document.getElementById('endDateTime').textContent = '00:00:00';
         
         // Calculate time until next midnight in selected timezone
         const nextMidnight = getNextMidnightInTimezone(currentTimezoneOffset);
@@ -749,7 +750,6 @@
         // Calculate total days passed in the selected timezone
         const midnightToday = getMidnightTodayInTimezone(currentTimezoneOffset);
         const daysSinceBirth = Math.floor((midnightToday - birthDate.getTime()) / (24 * 3600000));
-        const totalDaysInLife = Math.floor((endOfLife.getTime() - birthDate.getTime()) / (24 * 3600000));
         const daysRemaining = totalDaysInLife - daysSinceBirth;
         
         // Calculate the time components for today
