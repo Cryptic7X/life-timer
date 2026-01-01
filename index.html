@@ -217,46 +217,6 @@
       z-index: 1;
     }
     
-    /* End Date Display */
-    .end-date-display {
-      background: linear-gradient(145deg, #1f212e, #1a1c28);
-      border: 2px solid #2d303e;
-      border-radius: 16px;
-      padding: 20px 30px;
-      margin-bottom: 28px;
-      text-align: center;
-      transition: all 0.3s ease;
-    }
-    
-    .end-date-display:hover {
-      border-color: #ff6b6b;
-      box-shadow: 0 0 20px rgba(255, 107, 107, 0.15);
-    }
-    
-    .end-date-label {
-      font-size: 0.75rem;
-      color: #6b7280;
-      text-transform: uppercase;
-      letter-spacing: 2px;
-      font-weight: 600;
-      margin-bottom: 10px;
-    }
-    
-    .end-date-value {
-      font-size: 1.5rem;
-      font-weight: 700;
-      color: #ffffff;
-      letter-spacing: 1px;
-      text-shadow: 0 2px 10px rgba(255, 107, 107, 0.2);
-    }
-    
-    .end-date-time {
-      font-size: 0.9rem;
-      color: #9ca3af;
-      margin-top: 6px;
-      font-weight: 500;
-    }
-    
     /* Progress Bar */
     .progress-section {
       margin: 28px 0;
@@ -387,18 +347,6 @@
         font-size: 0.9rem;
       }
       
-      .end-date-display {
-        padding: 16px 20px;
-      }
-      
-      .end-date-value {
-        font-size: 1.2rem;
-      }
-      
-      .end-date-time {
-        font-size: 0.8rem;
-      }
-      
       .stats-grid {
         grid-template-columns: repeat(2, 1fr);
       }
@@ -425,10 +373,6 @@
       
       .clock-display {
         padding: 20px 15px;
-      }
-      
-      .end-date-value {
-        font-size: 1.1rem;
       }
     }
   </style>
@@ -499,13 +443,6 @@
         <div class="clock-time" id="clockTime">00:000:00:00:00</div>
         <div class="clock-label">YEARS : DAYS : HOURS : MIN : SEC</div>
         <div class="timer-title">⏳ Time Remaining</div>
-      </div>
-      
-      <!-- End Date Display -->
-      <div class="end-date-display">
-        <div class="end-date-label">📅 Calculated End Date</div>
-        <div class="end-date-value" id="endDateValue">Loading...</div>
-        <div class="end-date-time" id="endDateTime">00:00:00</div>
       </div>
       
       <div class="progress-section">
@@ -656,30 +593,6 @@
       }
     }
     
-    // NEW: Direct date formatting from timestamp WITHOUT adding timezone offset
-    function formatEndDate(timestampMs) {
-      const date = new Date(timestampMs);
-      
-      const months = ['January', 'February', 'March', 'April', 'May', 'June', 
-                      'July', 'August', 'September', 'October', 'November', 'December'];
-      
-      const year = date.getUTCFullYear();
-      const month = months[date.getUTCMonth()];
-      const day = date.getUTCDate();
-      
-      const suffix = (day) => {
-        if (day > 3 && day < 21) return 'th';
-        switch (day % 10) {
-          case 1: return 'st';
-          case 2: return 'nd';
-          case 3: return 'rd';
-          default: return 'th';
-        }
-      };
-      
-      return `${month} ${day}${suffix(day)}, ${year}`;
-    }
-    
     function startTimer(birthdate, lifeExpectancy, tzOffsetHours) {
       document.getElementById('setupScreen').classList.add('hidden');
       document.getElementById('timerScreen').classList.remove('hidden');
@@ -691,15 +604,24 @@
       
       const totalDaysInLife = Math.round(lifeExpectancy * 365.25);
       
+      console.log('==================== TIMEZONE DEBUG ====================');
+      console.log('Selected Timezone Offset: UTC' + (tzOffsetHours >= 0 ? '+' : '') + tzOffsetHours);
+      console.log('Birthdate Input:', birthdate);
+      console.log('Birth Date Object:', birthDate.toUTCString());
+      console.log('Birth Timestamp:', birthDate.getTime());
+      console.log('');
+      console.log('Current UTC Time:', new Date().toUTCString());
+      console.log('Current Time in Selected TZ:', new Date(getCurrentTimeInTimezone(tzOffsetHours)).toUTCString());
+      console.log('Next Midnight in Selected TZ:', new Date(getNextMidnightInTimezone(tzOffsetHours)).toUTCString());
+      console.log('========================================================');
+      
       function updateTimer() {
         const now = new Date();
         
-        // Calculate days remaining
         const midnightToday = getMidnightTodayInTimezone(currentTimezoneOffset);
         const daysSinceBirth = Math.floor((midnightToday - birthDate.getTime()) / (24 * 3600000));
         const daysRemaining = totalDaysInLife - daysSinceBirth;
         
-        // Calculate end date: midnightToday + daysRemaining
         const endOfLifeTimestamp = midnightToday + (daysRemaining * 24 * 3600000);
         const endOfLife = new Date(endOfLifeTimestamp);
         
@@ -710,17 +632,10 @@
           document.getElementById('clockTime').textContent = '00:000:00:00:00';
           document.getElementById('progressFill').style.width = '100%';
           document.getElementById('progressText').textContent = 'Life Lived: 100.00%';
-          document.getElementById('endDateTime').textContent = '00:00:00';
           clearInterval(timerInterval);
           return;
         }
         
-        // Format the end date WITHOUT adding timezone offset again
-        const endDateFormatted = formatEndDate(endOfLifeTimestamp);
-        document.getElementById('endDateValue').textContent = endDateFormatted;
-        document.getElementById('endDateTime').textContent = '00:00:00';
-        
-        // Calculate time until next midnight
         const nextMidnight = getNextMidnightInTimezone(currentTimezoneOffset);
         const timeUntilMidnight = nextMidnight - now.getTime();
         
