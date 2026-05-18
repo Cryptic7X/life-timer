@@ -274,3 +274,49 @@ button:active {
     transform: translateY(-6px);
   }
 }
+/* --- Cinematic Floating Quotes Background --- */
+.marquee-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  z-index: -1; /* Pushes it behind all your UI */
+  pointer-events: none; /* Prevents it from interfering with clicks */
+  display: flex;
+  flex-direction: column;
+  justify-content: space-evenly;
+  opacity: 0.04; /* Very subtle, barely there ghost text */
+}
+
+.marquee-track {
+  display: flex;
+  width: max-content;
+  animation: scroll-left 120s linear infinite; /* Ultra-slow smooth scrolling */
+}
+
+.marquee-track.reverse {
+  animation: scroll-right 150s linear infinite;
+}
+
+.marquee-text {
+  font-size: clamp(2rem, 5vw, 4rem);
+  font-weight: 900;
+  color: #22d3ee; /* Cyan tint */
+  white-space: nowrap;
+  padding: 0 40px;
+  text-transform: uppercase;
+  letter-spacing: 4px;
+  font-family: 'SF Mono', 'Courier New', monospace;
+}
+
+@keyframes scroll-left {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+@keyframes scroll-right {
+  0% { transform: translateX(-50%); }
+  100% { transform: translateX(0); }
+}
