@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Hourglass, Target, Brain, Play, Pause, RotateCcw, Plus, Trash2, CheckCircle2, Circle, Hexagon } from 'lucide-react';
+import { Hourglass, Target, Brain, Play, Pause, RotateCcw, Plus, Trash2, CheckCircle2, Circle, Hexagon, History, X } from 'lucide-react';
 
 const QUOTES = [
   "The consistent and persistent man of average intelligence is more likely to succeed than an erratic and lazy genius.",
@@ -23,18 +23,19 @@ export default function Home() {
     birthdate: '',
     lifeExpectancy: 73.4,
     timezone: 5.5,
-    focusTime: 25, // User customizable Focus timer
-    restTime: 5    // User customizable Rest timer
+    focusTime: 25,
+    restTime: 5
   });
   
   const [timerData, setTimerData] = useState({
     timeString: '00:000:00:00:00', livedPercent: 0, currentAge: 0, daysLeft: 0, hoursLeft: 0
   });
 
-  // --- NEW TASK LOGIC (URGENT / IMPORTANT / HISTORY) ---
+  // --- TASKS STATE (Urgent / Important / History) ---
   const [tasks, setTasks] = useState([]);
-  const [newTask, setNewTask] = useState('');
-  const [queueTab, setQueueTab] = useState('urgent'); // 'urgent', 'important', 'history'
+  const [newUrgentTask, setNewUrgentTask] = useState('');
+  const [newImportantTask, setNewImportantTask] = useState('');
+  const [showHistory, setShowHistory] = useState(false);
 
   const [dwTimeLeft, setDwTimeLeft] = useState(25 * 60); 
   const [dwIsActive, setDwIsActive] = useState(false);
@@ -59,7 +60,7 @@ export default function Home() {
         focusTime: parsedFT,
         restTime: savedRT ? parseInt(savedRT) : 5
       });
-      setDwTimeLeft(parsedFT * 60); // Initialize timer with saved setting
+      setDwTimeLeft(parsedFT * 60);
       setActiveTab('overview');
     } else {
       setActiveTab('settings');
@@ -142,17 +143,31 @@ export default function Home() {
     localStorage.setItem('lifeTimer_timezone', settings.timezone);
     localStorage.setItem('lifeTimer_focusTime', settings.focusTime);
     localStorage.setItem('lifeTimer_restTime', settings.restTime);
-    setDwTimeLeft(settings.focusTime * 60); // Apply new timer settings immediately
+    setDwTimeLeft(settings.focusTime * 60);
     setActiveTab('overview');
   };
 
-  const handleAddTask = () => {
-    if (newTask.trim() === '') return;
-    const taskType = queueTab === 'history' ? 'urgent' : queueTab; // Prevent adding directly to history
-    const updatedTasks = [...tasks, { id: Date.now(), text: newTask, type: taskType, done: false }];
+  const handleAddTask = (type) => {
+    const text = type === 'urgent' ? newUrgentTask : newImportantTask;
+    if (text.trim() === '') return;
+    
+    const updatedTasks = [{ id: Date.now(), text, type, done: false, completedAt: null }, ...tasks];
     setTasks(updatedTasks);
     localStorage.setItem('lifeTimer_tasks', JSON.stringify(updatedTasks));
-    setNewTask('');
+    
+    if (type === 'urgent') setNewUrgentTask('');
+    else setNewImportantTask('');
+  };
+
+  const toggleTask = (id) => {
+    const updatedTasks = tasks.map(t => {
+      if (t.id === id) {
+        return { ...t, done: !t.done, completedAt: !t.done ? Date.now() : null };
+      }
+      return t;
+    });
+    setTasks(updatedTasks);
+    localStorage.setItem('lifeTimer_tasks', JSON.stringify(updatedTasks));
   };
 
   const deleteTask = (id) => {
@@ -161,17 +176,9 @@ export default function Home() {
     localStorage.setItem('lifeTimer_tasks', JSON.stringify(updatedTasks));
   };
 
-  const toggleTask = (id) => {
-    const updatedTasks = tasks.map(t => t.id === id ? { ...t, done: !t.done } : t);
-    setTasks(updatedTasks);
-    localStorage.setItem('lifeTimer_tasks', JSON.stringify(updatedTasks));
-  };
-
-  // Filter tasks based on the active sub-tab
-  const displayedTasks = tasks.filter(t => {
-    if (queueTab === 'history') return t.done;
-    return !t.done && t.type === queueTab;
-  });
+  const activeUrgent = tasks.filter(t => t.type === 'urgent' && !t.done);
+  const activeImportant = tasks.filter(t => t.type === 'important' && !t.done);
+  const historyTasks = tasks.filter(t => t.done).sort((a, b) => b.completedAt - a.completedAt);
 
   const pageVariants = {
     initial: { opacity: 0, y: 15, scale: 0.98 },
@@ -216,7 +223,6 @@ export default function Home() {
                 </select>
               </div>
 
-              {/* NEW: DYNAMIC TIMER SETTINGS */}
               <div style={{ display: 'flex', gap: '15px' }}>
                 <div className="form-group" style={{ flex: 1 }}>
                   <label>Focus Time (Min)</label>
@@ -281,69 +287,101 @@ export default function Home() {
             </motion.div>
           )}
 
-          {/* --- TASKS SCREEN (WITH URGENT/IMPORTANT/HISTORY) --- */}
+          {/* --- TASKS SCREEN (MATRIX LAYOUT) --- */}
           {activeTab === 'tasks' && (
             <motion.div key="tasks" initial="initial" animate="in" exit="out" variants={pageVariants} transition={{ duration: 0.3 }} className="tasks">
-              <div className="header-container" style={{ textAlign: 'center', marginBottom: '20px' }}>
-                <h2>Execution Queue</h2>
+              
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
+                <div style={{ textAlign: 'left' }}>
+                  <h2 style={{ fontSize: '1.8rem', background: 'linear-gradient(180deg, #ffffff 0%, #94a3b8 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Execution Queue</h2>
+                  <p className="subtitle" style={{ marginTop: '2px' }}>Matrix Priorities</p>
+                </div>
+                <button 
+                  onClick={() => setShowHistory(!showHistory)}
+                  style={{ width: 'auto', padding: '10px 16px', background: showHistory ? 'rgba(6, 182, 212, 0.15)' : 'rgba(30, 41, 59, 0.4)', border: showHistory ? '1px solid #06b6d4' : '1px solid rgba(255,255,255,0.05)', boxShadow: 'none', color: showHistory ? '#06b6d4' : '#94a3b8', display: 'flex', gap: '8px', alignItems: 'center', borderRadius: '12px' }}
+                >
+                  <History size={18} />
+                  <span style={{ fontSize: '0.8rem', fontWeight: 600 }}>Log</span>
+                </button>
               </div>
 
-              {/* SUB-NAVIGATION TABS */}
-              <div style={{ display: 'flex', gap: '10px', marginBottom: '25px', justifyContent: 'center' }}>
-                <button onClick={() => setQueueTab('urgent')} style={{ padding: '8px 16px', borderRadius: '20px', background: queueTab === 'urgent' ? 'rgba(6, 182, 212, 0.15)' : 'transparent', border: queueTab === 'urgent' ? '1px solid #06b6d4' : '1px solid rgba(255,255,255,0.1)', color: queueTab === 'urgent' ? '#06b6d4' : '#64748b', fontSize: '0.8rem', boxShadow: 'none' }}>Urgent</button>
-                <button onClick={() => setQueueTab('important')} style={{ padding: '8px 16px', borderRadius: '20px', background: queueTab === 'important' ? 'rgba(139, 92, 246, 0.15)' : 'transparent', border: queueTab === 'important' ? '1px solid #8b5cf6' : '1px solid rgba(255,255,255,0.1)', color: queueTab === 'important' ? '#8b5cf6' : '#64748b', fontSize: '0.8rem', boxShadow: 'none' }}>Important</button>
-                <button onClick={() => setQueueTab('history')} style={{ padding: '8px 16px', borderRadius: '20px', background: queueTab === 'history' ? 'rgba(255, 255, 255, 0.1)' : 'transparent', border: queueTab === 'history' ? '1px solid #ffffff' : '1px solid rgba(255,255,255,0.1)', color: queueTab === 'history' ? '#ffffff' : '#64748b', fontSize: '0.8rem', boxShadow: 'none' }}>History</button>
-              </div>
+              {showHistory ? (
+                /* HISTORY LOG */
+                <div className="task-section">
+                  <h3 style={{ color: '#94a3b8', marginBottom: '15px', fontSize: '1.1rem', textAlign: 'left' }}>Completed Directives</h3>
+                  {historyTasks.length === 0 ? <p style={{ color: '#475569', fontSize: '0.9rem', textAlign: 'center', marginTop: '20px' }}>No log data found.</p> : null}
+                  <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    <AnimatePresence>
+                      {historyTasks.map(task => (
+                        <motion.li key={task.id} initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(30, 41, 59, 0.3)', padding: '14px 16px', borderRadius: '12px', borderLeft: task.type === 'urgent' ? '3px solid rgba(6, 182, 212, 0.5)' : '3px solid rgba(139, 92, 246, 0.5)' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                            <CheckCircle2 color="#475569" size={18} />
+                            <span style={{ color: '#64748b', textDecoration: 'line-through', fontSize: '0.95rem' }}>{task.text}</span>
+                          </div>
+                          <X color="#475569" size={18} style={{ cursor: 'pointer', transition: 'color 0.2s' }} onClick={() => deleteTask(task.id)} onMouseOver={(e) => e.target.style.color = '#ef4444'} onMouseOut={(e) => e.target.style.color = '#475569'} />
+                        </motion.li>
+                      ))}
+                    </AnimatePresence>
+                  </ul>
+                </div>
+              ) : (
+                /* ACTIVE MATRIX */
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '30px' }}>
+                  
+                  {/* URGENT SECTION */}
+                  <div className="task-section" style={{ borderLeft: '3px solid #06b6d4', paddingLeft: '15px', textAlign: 'left' }}>
+                    <h3 style={{ color: '#e2e8f0', fontSize: '1.1rem', marginBottom: '15px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#06b6d4', boxShadow: '0 0 10px #06b6d4' }}></div>
+                      Urgent (Do First)
+                    </h3>
+                    <div className="task-input-container" style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
+                      <input type="text" value={newUrgentTask} onChange={(e) => setNewUrgentTask(e.target.value)} placeholder="High priority directive..." onKeyDown={(e) => e.key === 'Enter' && handleAddTask('urgent')} style={{ padding: '14px 16px', background: 'rgba(30, 41, 59, 0.4)' }}/>
+                      <button onClick={() => handleAddTask('urgent')} style={{ width: '55px', padding: '0', display: 'flex', justifyContent: 'center', alignItems: 'center', background: 'linear-gradient(135deg, #06b6d4 0%, #3b82f6 100%)' }}>
+                        <Plus size={22} />
+                      </button>
+                    </div>
+                    <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                      <AnimatePresence>
+                        {activeUrgent.map(task => (
+                          <motion.li key={task.id} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(30, 41, 59, 0.4)', border: '1px solid rgba(255,255,255,0.05)', padding: '14px 16px', borderRadius: '12px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '15px', cursor: 'pointer' }} onClick={() => toggleTask(task.id)}>
+                              <Circle color="#06b6d4" size={20} />
+                              <span style={{ fontSize: '1rem', color: '#ffffff' }}>{task.text}</span>
+                            </div>
+                          </motion.li>
+                        ))}
+                      </AnimatePresence>
+                    </ul>
+                  </div>
 
-              {queueTab !== 'history' && (
-                <div className="task-input-container" style={{ display: 'flex', gap: '10px', marginBottom: '30px' }}>
-                  <input 
-                    type="text" 
-                    value={newTask}
-                    onChange={(e) => setNewTask(e.target.value)}
-                    placeholder={`Enter ${queueTab} directive...`}
-                    onKeyDown={(e) => e.key === 'Enter' && handleAddTask()}
-                  />
-                  <button onClick={handleAddTask} style={{ width: '60px', padding: '0', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-                    <Plus size={24} />
-                  </button>
+                  {/* IMPORTANT SECTION */}
+                  <div className="task-section" style={{ borderLeft: '3px solid #8b5cf6', paddingLeft: '15px', textAlign: 'left' }}>
+                    <h3 style={{ color: '#e2e8f0', fontSize: '1.1rem', marginBottom: '15px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#8b5cf6', boxShadow: '0 0 10px #8b5cf6' }}></div>
+                      Important (Schedule)
+                    </h3>
+                    <div className="task-input-container" style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
+                      <input type="text" value={newImportantTask} onChange={(e) => setNewImportantTask(e.target.value)} placeholder="Long-term directive..." onKeyDown={(e) => e.key === 'Enter' && handleAddTask('important')} style={{ padding: '14px 16px', background: 'rgba(30, 41, 59, 0.4)', borderColor: 'rgba(139, 92, 246, 0.3)' }}/>
+                      <button onClick={() => handleAddTask('important')} style={{ width: '55px', padding: '0', display: 'flex', justifyContent: 'center', alignItems: 'center', background: 'linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%)', boxShadow: '0 8px 25px rgba(139, 92, 246, 0.3)' }}>
+                        <Plus size={22} />
+                      </button>
+                    </div>
+                    <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                      <AnimatePresence>
+                        {activeImportant.map(task => (
+                          <motion.li key={task.id} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(30, 41, 59, 0.4)', border: '1px solid rgba(255,255,255,0.05)', padding: '14px 16px', borderRadius: '12px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '15px', cursor: 'pointer' }} onClick={() => toggleTask(task.id)}>
+                              <Circle color="#8b5cf6" size={20} />
+                              <span style={{ fontSize: '1rem', color: '#ffffff' }}>{task.text}</span>
+                            </div>
+                          </motion.li>
+                        ))}
+                      </AnimatePresence>
+                    </ul>
+                  </div>
+
                 </div>
               )}
-
-              <ul className="task-list" style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '15px' }}>
-                <AnimatePresence>
-                  {displayedTasks.length === 0 && (
-                    <motion.p initial={{opacity: 0}} animate={{opacity: 1}} style={{textAlign: 'center', color: '#64748b', marginTop: '20px'}}>
-                      No directives found in this sector.
-                    </motion.p>
-                  )}
-                  {displayedTasks.map(task => (
-                    <motion.li 
-                      key={task.id} 
-                      initial={{ opacity: 0, y: -10 }} 
-                      animate={{ opacity: 1, y: 0 }} 
-                      exit={{ opacity: 0, x: 20 }}
-                      style={{ 
-                        background: 'rgba(30, 41, 59, 0.4)', border: '1px solid rgba(255,255,255,0.05)', 
-                        borderRadius: '12px', padding: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center'
-                      }}
-                    >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '15px', cursor: 'pointer' }} onClick={() => toggleTask(task.id)}>
-                        {task.done ? <CheckCircle2 color="#64748b" /> : <Circle color={task.type === 'urgent' ? "#06b6d4" : "#8b5cf6"} />}
-                        <span style={{ 
-                          fontSize: '1.05rem', 
-                          color: task.done ? '#64748b' : '#ffffff', 
-                          textDecoration: task.done ? 'line-through' : 'none',
-                          transition: 'all 0.3s'
-                        }}>
-                          {task.text}
-                        </span>
-                      </div>
-                      <Trash2 color="#64748b" size={20} style={{ cursor: 'pointer' }} onClick={() => deleteTask(task.id)} />
-                    </motion.li>
-                  ))}
-                </AnimatePresence>
-              </ul>
             </motion.div>
           )}
 
