@@ -186,3 +186,56 @@ if ('serviceWorker' in navigator) {
 }
 
 init();
+
+
+// --- Navigation Logic ---
+function switchTab(screenId, navElement) {
+  // Hide all screens
+  document.querySelectorAll('.screen').forEach(screen => {
+    screen.classList.add('hidden');
+  });
+  
+  // Show target screen
+  document.getElementById(screenId).classList.remove('hidden');
+  
+  // Update nav active states
+  document.querySelectorAll('.nav-item').forEach(item => {
+    item.classList.remove('active');
+  });
+  navElement.classList.add('active');
+}
+
+// Modify your existing startTimer() to show the nav bar
+const originalStartTimer = startTimer;
+startTimer = function(birthdate, lifeExpectancy, tzOffsetHours) {
+  originalStartTimer(birthdate, lifeExpectancy, tzOffsetHours);
+  document.getElementById('mainNav').classList.remove('hidden'); // Reveal nav bar
+};
+
+// --- Task Logic (Rule of 3) ---
+function addTask() {
+  const input = document.getElementById('newTaskInput');
+  const taskText = input.value.trim();
+  const taskList = document.getElementById('taskList');
+  
+  // Limit to 3 tasks to enforce strict prioritization
+  if (taskList.children.length >= 3) {
+    alert("Focus mode: You can only have 3 primary tasks per day.");
+    return;
+  }
+  
+  if (taskText !== '') {
+    const li = document.createElement('li');
+    li.className = 'task-item';
+    li.innerHTML = `
+      <div class="task-content">
+        <input type="checkbox" class="task-checkbox">
+        <span class="task-text">${taskText}</span>
+      </div>
+      <button class="delete-btn" onclick="this.parentElement.remove()">×</button>
+    `;
+    
+    taskList.appendChild(li);
+    input.value = '';
+  }
+}
