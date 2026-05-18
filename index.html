@@ -34,36 +34,16 @@
           <option value="70.8">India (~70.8 years)</option>
           <option value="78.9">USA (~78.9 years)</option>
           <option value="84.0">Japan (~84.0 years)</option>
-          <option value="84.3">Singapore (~84.3 years)</option>
-          <option value="81.3">UK (~81.3 years)</option>
-          <option value="76.0">Brazil (~76.0 years)</option>
           <option value="custom">Custom</option>
         </select>
       </div>
       
       <div class="form-group">
-        <label for="timezone">
-          Timezone for day counter
-          <span class="label-help">When should the day counter reset?</span>
-        </label>
+        <label for="timezone">Timezone for day counter</label>
         <select id="timezone">
-          <option value="5.5">Indian Standard Time (IST - UTC+5:30)</option>
+          <option value="5.5">Indian Standard Time (IST)</option>
           <option value="0">Universal Time (UTC+0)</option>
-          <option value="-5">US Eastern Time (EST - UTC-5)</option>
-          <option value="-6">US Central Time (CST - UTC-6)</option>
-          <option value="-7">US Mountain Time (MST - UTC-7)</option>
-          <option value="-8">US Pacific Time (PST - UTC-8)</option>
-          <option value="1">Central Europe (CET - UTC+1)</option>
-          <option value="2">Eastern Europe (EET - UTC+2)</option>
-          <option value="3">Moscow (MSK - UTC+3)</option>
-          <option value="4">Gulf Standard (GST - UTC+4)</option>
-          <option value="5">Pakistan Time (PKT - UTC+5)</option>
-          <option value="6">Bangladesh Time (BST - UTC+6)</option>
-          <option value="7">Indochina Time (ICT - UTC+7)</option>
-          <option value="8">China Standard (CST - UTC+8)</option>
-          <option value="9">Japan Standard (JST - UTC+9)</option>
-          <option value="10">Australian Eastern (AEST - UTC+10)</option>
-          <option value="12">New Zealand (NZST - UTC+12)</option>
+          <option value="-5">US Eastern Time (EST)</option>
         </select>
       </div>
       
@@ -75,7 +55,7 @@
       <button onclick="saveSettings()">🕐 Start Clock</button>
     </div>
     
-    <div id="timerScreen" class="timer hidden">
+    <div id="timerScreen" class="screen timer hidden">
       <div class="clock-display">
         <div class="clock-time" id="clockTime">00:000:00:00:00</div>
         <div class="clock-label">YEARS : DAYS : HOURS : MIN : SEC</div>
@@ -103,10 +83,39 @@
           <div class="stat-label">Hours Left</div>
         </div>
       </div>
-      
-      <button class="settings-btn" onclick="showSettings()">⚙️ Settings</button>
     </div>
+
+    <div id="tasksScreen" class="screen tasks hidden">
+      <div class="header-container">
+        <h2>Daily Execution</h2>
+        <p class="subtitle">Select exactly 3 critical tasks for today.</p>
+      </div>
+
+      <div class="task-input-container">
+        <input type="text" id="newTaskInput" placeholder="Enter a high-impact task...">
+        <button onclick="addTask()" class="add-task-btn">+</button>
+      </div>
+
+      <ul id="taskList" class="task-list">
+        </ul>
+    </div>
+    
   </div>
+
+  <nav class="bottom-nav hidden" id="mainNav">
+    <button class="nav-item active" onclick="switchTab('timerScreen', this)">
+      <span class="nav-icon">⏳</span>
+      <span class="nav-text">Overview</span>
+    </button>
+    <button class="nav-item" onclick="switchTab('tasksScreen', this)">
+      <span class="nav-icon">🎯</span>
+      <span class="nav-text">Tasks</span>
+    </button>
+    <button class="nav-item" onclick="showSettings()">
+      <span class="nav-icon">⚙️</span>
+      <span class="nav-text">Settings</span>
+    </button>
+  </nav>
 
   <script src="./app.js"></script>
 </body>
