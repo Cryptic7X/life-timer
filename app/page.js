@@ -20,12 +20,16 @@ export default function Home() {
   
   // --- ADVANCED SETTINGS STATE ---
   const [settings, setSettings] = useState({
+    name: '',
     birthdate: '',
     lifeExpectancy: 73.4,
     timezone: 5.5,
     focusTime: 25,
     restTime: 5
   });
+  
+  // Controls whether we show the read-only Profile or the Input Form
+  const [isEditingSettings, setIsEditingSettings] = useState(false);
   
   const [timerData, setTimerData] = useState({
     timeString: '00:000:00:00:00', livedPercent: 0, currentAge: 0, daysLeft: 0, hoursLeft: 0
@@ -36,6 +40,7 @@ export default function Home() {
   const [newUrgentTask, setNewUrgentTask] = useState('');
   const [newImportantTask, setNewImportantTask] = useState('');
   const [showHistory, setShowHistory] = useState(false);
+  const [queueTab, setQueueTab] = useState('urgent');
 
   const [dwTimeLeft, setDwTimeLeft] = useState(25 * 60); 
   const [dwIsActive, setDwIsActive] = useState(false);
@@ -45,6 +50,7 @@ export default function Home() {
     setIsMounted(true);
     setCurrentQuote(QUOTES[Math.floor(Math.random() * QUOTES.length)]);
 
+    const savedName = localStorage.getItem('lifeTimer_name');
     const savedBD = localStorage.getItem('lifeTimer_birthdate');
     const savedLE = localStorage.getItem('lifeTimer_lifeExpectancy');
     const savedTZ = localStorage.getItem('lifeTimer_timezone');
@@ -54,6 +60,7 @@ export default function Home() {
     if (savedBD && savedLE) {
       const parsedFT = savedFT ? parseInt(savedFT) : 25;
       setSettings({
+        name: savedName || '',
         birthdate: savedBD,
         lifeExpectancy: parseFloat(savedLE),
         timezone: parseFloat(savedTZ) || 5.5,
@@ -61,8 +68,10 @@ export default function Home() {
         restTime: savedRT ? parseInt(savedRT) : 5
       });
       setDwTimeLeft(parsedFT * 60);
+      setIsEditingSettings(false); // Valid user, default to read-only profile
       setActiveTab('overview');
     } else {
+      setIsEditingSettings(true); // New user, force edit mode
       setActiveTab('settings');
     }
 
@@ -137,13 +146,18 @@ export default function Home() {
   };
 
   const saveSettings = () => {
-    if (!settings.birthdate) return alert('Please select your birthdate');
+    if (!settings.name.trim()) return alert('Please enter your designation/name.');
+    if (!settings.birthdate) return alert('Please select your birthdate.');
+    
+    localStorage.setItem('lifeTimer_name', settings.name);
     localStorage.setItem('lifeTimer_birthdate', settings.birthdate);
     localStorage.setItem('lifeTimer_lifeExpectancy', settings.lifeExpectancy);
     localStorage.setItem('lifeTimer_timezone', settings.timezone);
     localStorage.setItem('lifeTimer_focusTime', settings.focusTime);
     localStorage.setItem('lifeTimer_restTime', settings.restTime);
+    
     setDwTimeLeft(settings.focusTime * 60);
+    setIsEditingSettings(false);
     setActiveTab('overview');
   };
 
@@ -192,7 +206,7 @@ export default function Home() {
     <>
       {settings.birthdate && (
         <motion.header className="top-header" initial={{y: -20, opacity: 0}} animate={{y: 0, opacity: 1}} transition={{duration: 0.5}}>
-          <div className="brand-logo" onClick={() => setActiveTab('settings')}>
+          <div className="brand-logo" onClick={() => { setActiveTab('settings'); setIsEditingSettings(false); }}>
             <Hexagon size={24} color="#06b6d4" strokeWidth={2.5} />
             <span className="brand-name">KALA</span>
           </div>
@@ -200,51 +214,96 @@ export default function Home() {
       )}
 
       <div className="container">
+        
+        {/* --- GLOBAL QUOTE --- */}
+        {/* Displayed on all operational tabs, hidden during setup/profile */}
+        {settings.birthdate && activeTab !== 'settings' && (
+          <motion.div className="quote-container" initial={{opacity: 0, y: 10}} animate={{opacity: 1, y: 0}} transition={{delay: 0.2, duration: 0.8}}>
+            <p className="quote-text">"{currentQuote}"</p>
+          </motion.div>
+        )}
+
         <AnimatePresence mode="wait">
           
-          {/* --- SETTINGS SCREEN --- */}
+          {/* --- SETTINGS / PROFILE SCREEN --- */}
           {activeTab === 'settings' && (
             <motion.div key="settings" initial="initial" animate="in" exit="out" variants={pageVariants} transition={{ duration: 0.3 }} className="setup">
-              <h1>System Configuration</h1>
-              <p className="subtitle">Initialize your temporal and focus parameters.</p>
               
-              <div className="form-group" style={{ marginTop: '30px' }}>
-                <label>Birth Date</label>
-                <input type="date" value={settings.birthdate} onChange={(e) => setSettings({...settings, birthdate: e.target.value})} />
-              </div>
-              
-              <div className="form-group">
-                <label>Life Expectancy Model</label>
-                <select value={settings.lifeExpectancy} onChange={(e) => setSettings({...settings, lifeExpectancy: parseFloat(e.target.value)})}>
-                  <option value="73.4">Global Average (~73.4 yrs)</option>
-                  <option value="70.8">India (~70.8 yrs)</option>
-                  <option value="78.9">USA (~78.9 yrs)</option>
-                  <option value="84.0">Japan (~84.0 yrs)</option>
-                </select>
-              </div>
+              {!isEditingSettings ? (
+                /* --- READ-ONLY PROFILE VIEW --- */
+                <div style={{ textAlign: 'center' }}>
+                  <Hexagon size={56} color="#06b6d4" strokeWidth={1.5} style={{ margin: '0 auto 15px auto' }} />
+                  <h1 style={{ fontSize: '2.4rem', marginBottom: '5px' }}>Hello, {settings.name}.</h1>
+                  <p className="subtitle" style={{ marginBottom: '35px' }}>Temporal synchronization active.</p>
+                  
+                  <div style={{ background: 'rgba(30, 41, 59, 0.4)', borderRadius: '16px', padding: '25px', border: '1px solid rgba(255,255,255,0.05)', textAlign: 'left', marginBottom: '25px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '15px', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '15px' }}>
+                      <span style={{ color: '#94a3b8', fontSize: '0.85rem', fontWeight: 600, letterSpacing: '1px' }}>ORIGIN DATE</span>
+                      <span style={{ color: '#e2e8f0', fontWeight: 600 }}>{settings.birthdate}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '15px', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '15px' }}>
+                      <span style={{ color: '#94a3b8', fontSize: '0.85rem', fontWeight: 600, letterSpacing: '1px' }}>LIFE MODEL</span>
+                      <span style={{ color: '#06b6d4', fontWeight: 600 }}>{settings.lifeExpectancy} YRS</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span style={{ color: '#94a3b8', fontSize: '0.85rem', fontWeight: 600, letterSpacing: '1px' }}>FOCUS PROTOCOL</span>
+                      <span style={{ color: '#8b5cf6', fontWeight: 600 }}>{settings.focusTime}M / {settings.restTime}M</span>
+                    </div>
+                  </div>
+                  
+                  <button onClick={() => setIsEditingSettings(true)}>CONFIGURE SYSTEM</button>
+                </div>
+              ) : (
+                /* --- EDITABLE CONFIGURATION FORM --- */
+                <div style={{ textAlign: 'center' }}>
+                  <h1>System Configuration</h1>
+                  <p className="subtitle">Initialize your temporal parameters.</p>
+                  
+                  <div className="form-group" style={{ marginTop: '30px' }}>
+                    <label>Designation (Your Name)</label>
+                    <input type="text" value={settings.name} onChange={(e) => setSettings({...settings, name: e.target.value})} placeholder="Enter your name..." />
+                  </div>
 
-              <div style={{ display: 'flex', gap: '15px' }}>
-                <div className="form-group" style={{ flex: 1 }}>
-                  <label>Focus Time (Min)</label>
-                  <input type="number" value={settings.focusTime} onChange={(e) => setSettings({...settings, focusTime: parseInt(e.target.value) || 25})} />
+                  <div className="form-group">
+                    <label>Birth Date</label>
+                    <input type="date" value={settings.birthdate} onChange={(e) => setSettings({...settings, birthdate: e.target.value})} />
+                  </div>
+                  
+                  <div className="form-group">
+                    <label>Life Expectancy Model</label>
+                    <select value={settings.lifeExpectancy} onChange={(e) => setSettings({...settings, lifeExpectancy: parseFloat(e.target.value)})}>
+                      <option value="73.4">Global Average (~73.4 yrs)</option>
+                      <option value="70.8">India (~70.8 yrs)</option>
+                      <option value="78.9">USA (~78.9 yrs)</option>
+                      <option value="84.0">Japan (~84.0 yrs)</option>
+                    </select>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '15px' }}>
+                    <div className="form-group" style={{ flex: 1 }}>
+                      <label>Focus (Min)</label>
+                      <input type="number" value={settings.focusTime} onChange={(e) => setSettings({...settings, focusTime: parseInt(e.target.value) || 25})} />
+                    </div>
+                    <div className="form-group" style={{ flex: 1 }}>
+                      <label>Rest (Min)</label>
+                      <input type="number" value={settings.restTime} onChange={(e) => setSettings({...settings, restTime: parseInt(e.target.value) || 5})} />
+                    </div>
+                  </div>
+                  
+                  <button onClick={saveSettings} style={{ marginTop: '10px' }}>{localStorage.getItem('lifeTimer_birthdate') ? 'SAVE PARAMETERS' : 'INITIALIZE SYSTEM'}</button>
+                  
+                  {/* Allow canceling edit if a valid profile exists */}
+                  {localStorage.getItem('lifeTimer_birthdate') && (
+                     <button className="secondary" onClick={() => setIsEditingSettings(false)}>CANCEL</button>
+                  )}
                 </div>
-                <div className="form-group" style={{ flex: 1 }}>
-                  <label>Rest Time (Min)</label>
-                  <input type="number" value={settings.restTime} onChange={(e) => setSettings({...settings, restTime: parseInt(e.target.value) || 5})} />
-                </div>
-              </div>
-              
-              <button onClick={saveSettings} style={{ marginTop: '10px' }}>{settings.birthdate ? 'UPDATE SYSTEM' : 'INITIALIZE'}</button>
+              )}
             </motion.div>
           )}
 
           {/* --- OVERVIEW SCREEN --- */}
           {activeTab === 'overview' && (
             <motion.div key="overview" initial="initial" animate="in" exit="out" variants={pageVariants} transition={{ duration: 0.3 }} className="timer">
-              
-              <motion.div className="quote-container" initial={{opacity: 0, y: 10}} animate={{opacity: 1, y: 0}} transition={{delay: 0.2, duration: 0.8}}>
-                <p className="quote-text">"{currentQuote}"</p>
-              </motion.div>
 
               <div className="clock-display">
                 <div className="clock-flex-container">
