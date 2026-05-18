@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Hourglass, Target, Brain, Play, Pause, RotateCcw, Plus, Trash2, CheckCircle2, Circle, Hexagon } from 'lucide-react';
 
-// --- QUOTE DATABASE ---
 const QUOTES = [
   "The consistent and persistent man of average intelligence is more likely to succeed than an erratic and lazy genius.",
   "You may delay, but time will not.",
@@ -19,47 +18,48 @@ export default function Home() {
   const [activeTab, setActiveTab] = useState('overview');
   const [currentQuote, setCurrentQuote] = useState('');
   
-  // --- SETTINGS STATE ---
+  // --- ADVANCED SETTINGS STATE ---
   const [settings, setSettings] = useState({
     birthdate: '',
     lifeExpectancy: 73.4,
-    timezone: 5.5
+    timezone: 5.5,
+    focusTime: 25, // User customizable Focus timer
+    restTime: 5    // User customizable Rest timer
   });
   
-  // --- LIFE TIMER STATE ---
   const [timerData, setTimerData] = useState({
-    timeString: '00:000:00:00:00',
-    livedPercent: 0,
-    currentAge: 0,
-    daysLeft: 0,
-    hoursLeft: 0
+    timeString: '00:000:00:00:00', livedPercent: 0, currentAge: 0, daysLeft: 0, hoursLeft: 0
   });
 
-  // --- TASKS STATE ---
+  // --- NEW TASK LOGIC (URGENT / IMPORTANT / HISTORY) ---
   const [tasks, setTasks] = useState([]);
   const [newTask, setNewTask] = useState('');
+  const [queueTab, setQueueTab] = useState('urgent'); // 'urgent', 'important', 'history'
 
-  // --- DEEP WORK STATE ---
   const [dwTimeLeft, setDwTimeLeft] = useState(25 * 60); 
   const [dwIsActive, setDwIsActive] = useState(false);
   const [dwMode, setDwMode] = useState('work'); 
 
-  // --- INITIALIZATION ---
   useEffect(() => {
     setIsMounted(true);
-    // Pick a random quote on mount
     setCurrentQuote(QUOTES[Math.floor(Math.random() * QUOTES.length)]);
 
     const savedBD = localStorage.getItem('lifeTimer_birthdate');
     const savedLE = localStorage.getItem('lifeTimer_lifeExpectancy');
     const savedTZ = localStorage.getItem('lifeTimer_timezone');
+    const savedFT = localStorage.getItem('lifeTimer_focusTime');
+    const savedRT = localStorage.getItem('lifeTimer_restTime');
     
     if (savedBD && savedLE) {
+      const parsedFT = savedFT ? parseInt(savedFT) : 25;
       setSettings({
         birthdate: savedBD,
         lifeExpectancy: parseFloat(savedLE),
-        timezone: parseFloat(savedTZ) || 5.5
+        timezone: parseFloat(savedTZ) || 5.5,
+        focusTime: parsedFT,
+        restTime: savedRT ? parseInt(savedRT) : 5
       });
+      setDwTimeLeft(parsedFT * 60); // Initialize timer with saved setting
       setActiveTab('overview');
     } else {
       setActiveTab('settings');
@@ -69,21 +69,16 @@ export default function Home() {
     setTasks(savedTasks);
   }, []);
 
-  // --- LIFE TIMER LOGIC ---
   useEffect(() => {
     if (!settings.birthdate || activeTab === 'settings') return;
-
     const interval = setInterval(() => {
       const now = new Date();
       const tzOffsetHours = settings.timezone;
-      
       const [year, month, day] = settings.birthdate.split('-');
       const midnightUTC = Date.UTC(parseInt(year), parseInt(month) - 1, parseInt(day), 0, 0, 0, 0);
       const birthDate = new Date(midnightUTC - (tzOffsetHours * 3600000));
-      
       const totalDaysInLife = Math.round(settings.lifeExpectancy * 365.25);
       const endOfLife = new Date(birthDate.getTime() + (totalDaysInLife * 24 * 3600000));
-      
       const remaining = endOfLife - now;
       const lived = now - birthDate;
 
@@ -92,7 +87,6 @@ export default function Home() {
         const hours = Math.floor((remaining / (1000 * 60 * 60)) % 24);
         const minutes = Math.floor((remaining / 1000 / 60) % 60);
         const seconds = Math.floor((remaining / 1000) % 60);
-        
         const years = Math.floor(daysRemaining / 365);
         const days = daysRemaining % 365;
 
@@ -105,63 +99,57 @@ export default function Home() {
         });
       }
     }, 1000);
-
     return () => clearInterval(interval);
   }, [settings, activeTab]);
 
-  // --- DEEP WORK LOGIC ---
   useEffect(() => {
     let interval = null;
     if (dwIsActive && dwTimeLeft > 0) {
-      interval = setInterval(() => {
-        setDwTimeLeft(time => time - 1);
-      }, 1000);
+      interval = setInterval(() => setDwTimeLeft(time => time - 1), 1000);
     } else if (dwTimeLeft === 0) {
       setDwIsActive(false);
       if (dwMode === 'work') {
         setDwMode('break');
-        setDwTimeLeft(5 * 60);
+        setDwTimeLeft(settings.restTime * 60);
       } else {
         setDwMode('work');
-        setDwTimeLeft(25 * 60);
+        setDwTimeLeft(settings.focusTime * 60);
       }
     }
     return () => clearInterval(interval);
-  }, [dwIsActive, dwTimeLeft, dwMode]);
+  }, [dwIsActive, dwTimeLeft, dwMode, settings]);
 
   const toggleDwTimer = () => setDwIsActive(!dwIsActive);
-  
   const resetDwTimer = () => {
     setDwIsActive(false);
-    setDwTimeLeft(dwMode === 'work' ? 25 * 60 : 5 * 60);
+    setDwTimeLeft(dwMode === 'work' ? settings.focusTime * 60 : settings.restTime * 60);
   };
-
   const switchDwMode = (mode) => {
     setDwIsActive(false);
     setDwMode(mode);
-    setDwTimeLeft(mode === 'work' ? 25 * 60 : 5 * 60);
+    setDwTimeLeft(mode === 'work' ? settings.focusTime * 60 : settings.restTime * 60);
   };
-
   const formatDwTime = (seconds) => {
     const m = Math.floor(seconds / 60);
     const s = seconds % 60;
     return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   };
 
-  // --- HANDLERS ---
   const saveSettings = () => {
     if (!settings.birthdate) return alert('Please select your birthdate');
     localStorage.setItem('lifeTimer_birthdate', settings.birthdate);
     localStorage.setItem('lifeTimer_lifeExpectancy', settings.lifeExpectancy);
     localStorage.setItem('lifeTimer_timezone', settings.timezone);
+    localStorage.setItem('lifeTimer_focusTime', settings.focusTime);
+    localStorage.setItem('lifeTimer_restTime', settings.restTime);
+    setDwTimeLeft(settings.focusTime * 60); // Apply new timer settings immediately
     setActiveTab('overview');
   };
 
   const handleAddTask = () => {
-    if (tasks.filter(t => !t.done).length >= 3) return alert("Focus mode: Complete your current 3 primary tasks first.");
     if (newTask.trim() === '') return;
-    
-    const updatedTasks = [...tasks, { id: Date.now(), text: newTask, done: false }];
+    const taskType = queueTab === 'history' ? 'urgent' : queueTab; // Prevent adding directly to history
+    const updatedTasks = [...tasks, { id: Date.now(), text: newTask, type: taskType, done: false }];
     setTasks(updatedTasks);
     localStorage.setItem('lifeTimer_tasks', JSON.stringify(updatedTasks));
     setNewTask('');
@@ -179,6 +167,12 @@ export default function Home() {
     localStorage.setItem('lifeTimer_tasks', JSON.stringify(updatedTasks));
   };
 
+  // Filter tasks based on the active sub-tab
+  const displayedTasks = tasks.filter(t => {
+    if (queueTab === 'history') return t.done;
+    return !t.done && t.type === queueTab;
+  });
+
   const pageVariants = {
     initial: { opacity: 0, y: 15, scale: 0.98 },
     in: { opacity: 1, y: 0, scale: 1 },
@@ -189,12 +183,11 @@ export default function Home() {
 
   return (
     <>
-      {/* --- BRAND HEADER (Profile/Settings Portal) --- */}
       {settings.birthdate && (
         <motion.header className="top-header" initial={{y: -20, opacity: 0}} animate={{y: 0, opacity: 1}} transition={{duration: 0.5}}>
           <div className="brand-logo" onClick={() => setActiveTab('settings')}>
             <Hexagon size={24} color="#06b6d4" strokeWidth={2.5} />
-            <span className="brand-name">KAIROS</span>
+            <span className="brand-name">KALA</span>
           </div>
         </motion.header>
       )}
@@ -206,7 +199,7 @@ export default function Home() {
           {activeTab === 'settings' && (
             <motion.div key="settings" initial="initial" animate="in" exit="out" variants={pageVariants} transition={{ duration: 0.3 }} className="setup">
               <h1>System Configuration</h1>
-              <p className="subtitle">Initialize your temporal parameters.</p>
+              <p className="subtitle">Initialize your temporal and focus parameters.</p>
               
               <div className="form-group" style={{ marginTop: '30px' }}>
                 <label>Birth Date</label>
@@ -222,16 +215,27 @@ export default function Home() {
                   <option value="84.0">Japan (~84.0 yrs)</option>
                 </select>
               </div>
+
+              {/* NEW: DYNAMIC TIMER SETTINGS */}
+              <div style={{ display: 'flex', gap: '15px' }}>
+                <div className="form-group" style={{ flex: 1 }}>
+                  <label>Focus Time (Min)</label>
+                  <input type="number" value={settings.focusTime} onChange={(e) => setSettings({...settings, focusTime: parseInt(e.target.value) || 25})} />
+                </div>
+                <div className="form-group" style={{ flex: 1 }}>
+                  <label>Rest Time (Min)</label>
+                  <input type="number" value={settings.restTime} onChange={(e) => setSettings({...settings, restTime: parseInt(e.target.value) || 5})} />
+                </div>
+              </div>
               
-              <button onClick={saveSettings} style={{ marginTop: '20px' }}>{settings.birthdate ? 'UPDATE SYSTEM' : 'INITIALIZE'}</button>
+              <button onClick={saveSettings} style={{ marginTop: '10px' }}>{settings.birthdate ? 'UPDATE SYSTEM' : 'INITIALIZE'}</button>
             </motion.div>
           )}
 
-          {/* --- OVERVIEW SCREEN (LIFE TIMER + QUOTE) --- */}
+          {/* --- OVERVIEW SCREEN --- */}
           {activeTab === 'overview' && (
             <motion.div key="overview" initial="initial" animate="in" exit="out" variants={pageVariants} transition={{ duration: 0.3 }} className="timer">
               
-              {/* Dynamic Elegant Quote */}
               <motion.div className="quote-container" initial={{opacity: 0, y: 10}} animate={{opacity: 1, y: 0}} transition={{delay: 0.2, duration: 0.8}}>
                 <p className="quote-text">"{currentQuote}"</p>
               </motion.div>
@@ -241,7 +245,7 @@ export default function Home() {
                   {timerData.timeString.split(':').map((part, index) => {
                     const labels = ['YRS', 'DYS', 'HRS', 'MIN', 'SEC'];
                     return (
-                      <div key={index} style={{ display: 'flex' }}>
+                      <div key={index} style={{ display: 'flex', alignItems: 'flex-start' }}>
                         <div className="time-unit">
                           <span className="unit-value">{part}</span>
                           <span className="unit-label">{labels[index]}</span>
@@ -277,34 +281,47 @@ export default function Home() {
             </motion.div>
           )}
 
-          {/* --- TASKS SCREEN --- */}
+          {/* --- TASKS SCREEN (WITH URGENT/IMPORTANT/HISTORY) --- */}
           {activeTab === 'tasks' && (
             <motion.div key="tasks" initial="initial" animate="in" exit="out" variants={pageVariants} transition={{ duration: 0.3 }} className="tasks">
-              <div className="header-container" style={{ textAlign: 'center', marginBottom: '30px' }}>
+              <div className="header-container" style={{ textAlign: 'center', marginBottom: '20px' }}>
                 <h2>Execution Queue</h2>
-                <p className="subtitle">Max capacity: 3 active directives.</p>
               </div>
 
-              <div className="task-input-container" style={{ display: 'flex', gap: '10px', marginBottom: '30px' }}>
-                <input 
-                  type="text" 
-                  value={newTask}
-                  onChange={(e) => setNewTask(e.target.value)}
-                  placeholder="Enter directive..."
-                  onKeyDown={(e) => e.key === 'Enter' && handleAddTask()}
-                />
-                <button onClick={handleAddTask} style={{ width: '60px', padding: '0', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-                  <Plus size={24} />
-                </button>
+              {/* SUB-NAVIGATION TABS */}
+              <div style={{ display: 'flex', gap: '10px', marginBottom: '25px', justifyContent: 'center' }}>
+                <button onClick={() => setQueueTab('urgent')} style={{ padding: '8px 16px', borderRadius: '20px', background: queueTab === 'urgent' ? 'rgba(6, 182, 212, 0.15)' : 'transparent', border: queueTab === 'urgent' ? '1px solid #06b6d4' : '1px solid rgba(255,255,255,0.1)', color: queueTab === 'urgent' ? '#06b6d4' : '#64748b', fontSize: '0.8rem', boxShadow: 'none' }}>Urgent</button>
+                <button onClick={() => setQueueTab('important')} style={{ padding: '8px 16px', borderRadius: '20px', background: queueTab === 'important' ? 'rgba(139, 92, 246, 0.15)' : 'transparent', border: queueTab === 'important' ? '1px solid #8b5cf6' : '1px solid rgba(255,255,255,0.1)', color: queueTab === 'important' ? '#8b5cf6' : '#64748b', fontSize: '0.8rem', boxShadow: 'none' }}>Important</button>
+                <button onClick={() => setQueueTab('history')} style={{ padding: '8px 16px', borderRadius: '20px', background: queueTab === 'history' ? 'rgba(255, 255, 255, 0.1)' : 'transparent', border: queueTab === 'history' ? '1px solid #ffffff' : '1px solid rgba(255,255,255,0.1)', color: queueTab === 'history' ? '#ffffff' : '#64748b', fontSize: '0.8rem', boxShadow: 'none' }}>History</button>
               </div>
+
+              {queueTab !== 'history' && (
+                <div className="task-input-container" style={{ display: 'flex', gap: '10px', marginBottom: '30px' }}>
+                  <input 
+                    type="text" 
+                    value={newTask}
+                    onChange={(e) => setNewTask(e.target.value)}
+                    placeholder={`Enter ${queueTab} directive...`}
+                    onKeyDown={(e) => e.key === 'Enter' && handleAddTask()}
+                  />
+                  <button onClick={handleAddTask} style={{ width: '60px', padding: '0', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                    <Plus size={24} />
+                  </button>
+                </div>
+              )}
 
               <ul className="task-list" style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '15px' }}>
                 <AnimatePresence>
-                  {tasks.map(task => (
+                  {displayedTasks.length === 0 && (
+                    <motion.p initial={{opacity: 0}} animate={{opacity: 1}} style={{textAlign: 'center', color: '#64748b', marginTop: '20px'}}>
+                      No directives found in this sector.
+                    </motion.p>
+                  )}
+                  {displayedTasks.map(task => (
                     <motion.li 
                       key={task.id} 
-                      initial={{ opacity: 0, x: -20 }} 
-                      animate={{ opacity: 1, x: 0 }} 
+                      initial={{ opacity: 0, y: -10 }} 
+                      animate={{ opacity: 1, y: 0 }} 
                       exit={{ opacity: 0, x: 20 }}
                       style={{ 
                         background: 'rgba(30, 41, 59, 0.4)', border: '1px solid rgba(255,255,255,0.05)', 
@@ -312,7 +329,7 @@ export default function Home() {
                       }}
                     >
                       <div style={{ display: 'flex', alignItems: 'center', gap: '15px', cursor: 'pointer' }} onClick={() => toggleTask(task.id)}>
-                        {task.done ? <CheckCircle2 color="#64748b" /> : <Circle color="#06b6d4" />}
+                        {task.done ? <CheckCircle2 color="#64748b" /> : <Circle color={task.type === 'urgent' ? "#06b6d4" : "#8b5cf6"} />}
                         <span style={{ 
                           fontSize: '1.05rem', 
                           color: task.done ? '#64748b' : '#ffffff', 
@@ -347,7 +364,7 @@ export default function Home() {
                     border: dwMode === 'work' ? '1px solid #06b6d4' : '1px solid rgba(255,255,255,0.1)',
                     boxShadow: 'none', color: dwMode === 'work' ? '#06b6d4' : '#64748b'
                   }}>
-                  FOCUS (25m)
+                  FOCUS ({settings.focusTime}m)
                 </button>
                 <button 
                   onClick={() => switchDwMode('break')}
@@ -357,7 +374,7 @@ export default function Home() {
                     border: dwMode === 'break' ? '1px solid #8b5cf6' : '1px solid rgba(255,255,255,0.1)',
                     boxShadow: 'none', color: dwMode === 'break' ? '#8b5cf6' : '#64748b'
                   }}>
-                  REST (5m)
+                  REST ({settings.restTime}m)
                 </button>
               </div>
 
