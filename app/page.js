@@ -46,10 +46,18 @@ export default function Home() {
   const [dwIsActive, setDwIsActive] = useState(false);
   const [dwMode, setDwMode] = useState('work'); 
 
+// --- INITIALIZATION ---
   useEffect(() => {
     setIsMounted(true);
     setCurrentQuote(QUOTES[Math.floor(Math.random() * QUOTES.length)]);
 
+    // --- ADD THIS NEW BLOCK HERE FOR THE PWA ICON & OFFLINE SUPPORT ---
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js')
+        .then(reg => console.log('Service Worker Registered!', reg))
+        .catch(err => console.error('Service Worker Registration Failed!', err));
+    }
+    // ------------------------------------------------------------------
     const savedName = localStorage.getItem('lifeTimer_name');
     const savedBD = localStorage.getItem('lifeTimer_birthdate');
     const savedLE = localStorage.getItem('lifeTimer_lifeExpectancy');
