@@ -1,7 +1,7 @@
 import "./globals.css";
 
 export const metadata = {
-  title: "Kala ⏳",
+  title: "Kal ⏳",
   description: "Count your remaining time based on average life expectancy",
   icons: {
     icon: '/icon.svg',
