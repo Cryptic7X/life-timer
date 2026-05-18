@@ -1,4 +1,4 @@
-const CACHE_NAME = 'kala-v1';
+const CACHE_NAME = 'kal-v1';
 
 // Only pre-cache known static assets
 const urlsToCache = [
