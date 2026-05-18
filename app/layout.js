@@ -7,6 +7,7 @@ export const metadata = {
     icon: '/icon-192.png',
     apple: '/icon-192.png',
   },
+  manifest: '/manifest.json', // This connects your PWA config!
 };
 
 export default function RootLayout({ children }) {
