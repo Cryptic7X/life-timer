@@ -1,0 +1,10 @@
+export const productivityQuotes = [
+  "The consistent and persistent man of average intelligence is more likely to succeed than an erratic and lazy genius.",
+  "AMATEURS SIT AND WAIT FOR INSPIRATION. THE REST OF US JUST GET UP AND GO TO WORK.",
+  "SYSTEMS OVER GOALS. HABITS OVER MOTIVATION.",
+  "DO NOT CONFUSE MOTION WITH ACTION.",
+  "THE MAGIC YOU ARE LOOKING FOR IS IN THE WORK YOU ARE AVOIDING.",
+  "DISCIPLINE EQUALS FREEDOM.",
+  "TIME IS THE ONLY NON-RENEWABLE RESOURCE.",
+  "EXECUTION IS THE ONLY METRIC THAT MATTERS."
+];
