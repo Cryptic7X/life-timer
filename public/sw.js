@@ -1,15 +1,13 @@
-const CACHE_NAME = 'life-timer-v2';
+const CACHE_NAME = 'kala-v1';
+
+// Only pre-cache known static assets
 const urlsToCache = [
-  './',
-  './index.html',
-  './styles.css',
-  './app.js',
-  './manifest.json',
-  './icon-192.png',
-  './icon-512.png'
+  '/',
+  '/manifest.json',
+  '/icon.svg'
 ];
 
-// Install service worker and cache files
+// Install service worker and pre-cache static assets
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME)
@@ -17,11 +15,37 @@ self.addEventListener('install', (event) => {
   );
 });
 
-// Fetch from cache or network
+// Fetch from network first, fallback to cache, and dynamically cache new files
 self.addEventListener('fetch', (event) => {
+  // Only intercept GET requests
+  if (event.request.method !== 'GET') return;
+
   event.respondWith(
     caches.match(event.request)
-      .then((response) => response || fetch(event.request))
+      .then((cachedResponse) => {
+        if (cachedResponse) {
+          return cachedResponse; // Return cached version if found
+        }
+        
+        return fetch(event.request).then(
+          (networkResponse) => {
+            // Don't cache bad responses or third-party opaque responses
+            if(!networkResponse || networkResponse.status !== 200 || networkResponse.type !== 'basic') {
+              return networkResponse;
+            }
+
+            // Clone the response because it's a stream
+            const responseToCache = networkResponse.clone();
+
+            caches.open(CACHE_NAME)
+              .then((cache) => {
+                cache.put(event.request, responseToCache);
+              });
+
+            return networkResponse;
+          }
+        );
+      })
   );
 });
 
