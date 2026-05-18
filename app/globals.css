@@ -203,10 +203,12 @@ button:active {
 
 .unit-separator {
   font-size: clamp(1.6rem, 7vw, 3.2rem);
-  color: rgba(255,255,255,0.1);
-  margin-top: 4px;
+  color: rgba(255, 255, 255, 0.2); 
+  font-family: 'SF Mono', 'Courier New', monospace; /* Forces the colon to match the numbers */
   font-weight: 800;
   line-height: 1;
+  margin-top: 0;
+  transform: translateY(-12%); /* Lifts the colon perfectly to the middle of the number */
 }
 
 /* --- Data Stats Grid --- */
