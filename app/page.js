@@ -3,6 +3,27 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Hourglass, Target, Brain, Settings, Play, Pause, RotateCcw, Plus, CheckCircle2, Circle, History, X, Edit2 } from 'lucide-react';
+import { productivityQuotes } from './quotes'; // IMPORT YOUR NEW QUOTES
+
+// --- THE NEW CINEMATIC BACKGROUND COMPONENT ---
+const FloatingBackground = () => {
+  // We duplicate the array so the infinite scroll loops seamlessly
+  const doubledQuotes = [...productivityQuotes, ...productivityQuotes];
+  
+  return (
+    <div className="marquee-container">
+      <div className="marquee-track">
+        {doubledQuotes.map((q, i) => <span key={`top-${i}`} className="marquee-text">✦ {q}</span>)}
+      </div>
+      <div className="marquee-track reverse">
+        {doubledQuotes.map((q, i) => <span key={`mid-${i}`} className="marquee-text">✦ {q}</span>)}
+      </div>
+      <div className="marquee-track">
+        {doubledQuotes.map((q, i) => <span key={`bot-${i}`} className="marquee-text">✦ {q}</span>)}
+      </div>
+    </div>
+  );
+};
 
 export default function Home() {
   const [isMounted, setIsMounted] = useState(false);
@@ -10,9 +31,7 @@ export default function Home() {
   
   // --- SETTINGS STATE ---
   const [settings, setSettings] = useState({
-    birthdate: '',
-    lifeExpectancy: 73.4,
-    timezone: 5.5
+    birthdate: '', lifeExpectancy: 73.4, timezone: 5.5
   });
   
   // --- LIFE TIMER STATE ---
@@ -27,14 +46,12 @@ export default function Home() {
   const [newImportantTask, setNewImportantTask] = useState('');
   const [showHistory, setShowHistory] = useState(false);
 
-  // --- DEEP WORK STATE (DYNAMIC) ---
+  // --- DEEP WORK STATE ---
   const [workDuration, setWorkDuration] = useState(25);
   const [breakDuration, setBreakDuration] = useState(5);
   const [dwTimeLeft, setDwTimeLeft] = useState(25 * 60);
   const [dwIsActive, setDwIsActive] = useState(false);
   const [dwMode, setDwMode] = useState('work');
-  
-  // Editing State
   const [isEditingTime, setIsEditingTime] = useState(false);
   const [editInputValue, setEditInputValue] = useState('');
 
@@ -47,9 +64,7 @@ export default function Home() {
     
     if (savedBD && savedLE) {
       setSettings({
-        birthdate: savedBD,
-        lifeExpectancy: parseFloat(savedLE),
-        timezone: parseFloat(savedTZ) || 5.5
+        birthdate: savedBD, lifeExpectancy: parseFloat(savedLE), timezone: parseFloat(savedTZ) || 5.5
       });
       setActiveTab('overview');
     } else {
@@ -59,7 +74,6 @@ export default function Home() {
     const savedTasks = JSON.parse(localStorage.getItem('lifeTimer_pro_tasks') || '[]');
     setTasks(savedTasks);
 
-    // Load custom timer settings
     const savedWork = localStorage.getItem('lifeTimer_workDur');
     const savedBreak = localStorage.getItem('lifeTimer_breakDur');
     if (savedWork) {
@@ -67,7 +81,6 @@ export default function Home() {
       setDwTimeLeft(parseInt(savedWork) * 60);
     }
     if (savedBreak) setBreakDuration(parseInt(savedBreak));
-
   }, []);
 
   // --- LIFE TIMER LOGIC ---
@@ -117,7 +130,6 @@ export default function Home() {
       }, 1000);
     } else if (dwTimeLeft === 0 && dwIsActive) {
       setDwIsActive(false);
-      // Auto-switch modes when time is up
       if (dwMode === 'work') {
         setDwMode('break');
         setDwTimeLeft(breakDuration * 60);
@@ -129,32 +141,27 @@ export default function Home() {
     return () => clearInterval(interval);
   }, [dwIsActive, dwTimeLeft, dwMode, workDuration, breakDuration]);
 
-  // --- TIMER HANDLERS ---
+  // --- HANDLERS ---
   const toggleDwTimer = () => setDwIsActive(!dwIsActive);
-  
   const resetDwTimer = () => {
     setDwIsActive(false);
     setDwTimeLeft(dwMode === 'work' ? workDuration * 60 : breakDuration * 60);
   };
-  
   const switchDwMode = (mode) => {
     setDwIsActive(false);
     setDwMode(mode);
     setDwTimeLeft(mode === 'work' ? workDuration * 60 : breakDuration * 60);
     setIsEditingTime(false);
   };
-
   const handleTimeClick = () => {
     if (!dwIsActive) {
       setIsEditingTime(true);
       setEditInputValue(dwMode === 'work' ? workDuration.toString() : breakDuration.toString());
     }
   };
-
   const handleTimeSubmit = (e) => {
     if (e) e.preventDefault();
     const newMinutes = parseInt(editInputValue);
-    
     if (!isNaN(newMinutes) && newMinutes > 0 && newMinutes <= 120) {
       if (dwMode === 'work') {
         setWorkDuration(newMinutes);
@@ -168,14 +175,12 @@ export default function Home() {
     }
     setIsEditingTime(false);
   };
-
   const formatDwTime = (seconds) => {
     const m = Math.floor(seconds / 60);
     const s = seconds % 60;
     return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   };
 
-  // --- GENERAL HANDLERS ---
   const saveSettings = () => {
     if (!settings.birthdate) return alert('Please select your birthdate');
     localStorage.setItem('lifeTimer_birthdate', settings.birthdate);
@@ -219,6 +224,9 @@ export default function Home() {
 
   return (
     <div className="container">
+      {/* INJECTING THE BACKGROUND COMPONENT */}
+      <FloatingBackground /> 
+      
       <AnimatePresence mode="wait">
         
         {/* --- SETTINGS SCREEN --- */}
@@ -348,58 +356,17 @@ export default function Home() {
               </button>
             </div>
 
-            <div 
-              className="clock-display" 
-              onClick={handleTimeClick}
-              style={{ 
-                borderColor: dwMode === 'work' ? 'rgba(6, 182, 212, 0.3)' : 'rgba(139, 92, 246, 0.3)',
-                boxShadow: dwMode === 'work' 
-                  ? '0 20px 40px rgba(0,0,0,0.5), inset 0 0 40px rgba(6, 182, 212, 0.05)' 
-                  : '0 20px 40px rgba(0,0,0,0.5), inset 0 0 40px rgba(139, 92, 246, 0.05)',
-                cursor: dwIsActive ? 'default' : 'pointer',
-                position: 'relative'
-              }}
-            >
+            <div className="clock-display" onClick={handleTimeClick} style={{ borderColor: dwMode === 'work' ? 'rgba(6, 182, 212, 0.3)' : 'rgba(139, 92, 246, 0.3)', boxShadow: dwMode === 'work' ? '0 20px 40px rgba(0,0,0,0.5), inset 0 0 40px rgba(6, 182, 212, 0.05)' : '0 20px 40px rgba(0,0,0,0.5), inset 0 0 40px rgba(139, 92, 246, 0.05)', cursor: dwIsActive ? 'default' : 'pointer', position: 'relative' }}>
               {!dwIsActive && !isEditingTime && (
-                <div style={{ position: 'absolute', top: '15px', right: '15px', opacity: 0.5 }}>
-                  <Edit2 size={16} color={dwMode === 'work' ? '#22d3ee' : '#a78bfa'} />
-                </div>
+                <div style={{ position: 'absolute', top: '15px', right: '15px', opacity: 0.5 }}><Edit2 size={16} color={dwMode === 'work' ? '#22d3ee' : '#a78bfa'} /></div>
               )}
 
               {isEditingTime ? (
                 <form onSubmit={handleTimeSubmit} style={{ width: '100%', display: 'flex', justifyContent: 'center' }}>
-                  <input 
-                    type="number" 
-                    autoFocus
-                    min="1"
-                    max="120"
-                    value={editInputValue} 
-                    onChange={(e) => setEditInputValue(e.target.value)}
-                    onBlur={handleTimeSubmit}
-                    style={{ 
-                      width: '120px', textAlign: 'center', fontSize: '3rem', padding: '10px',
-                      background: 'transparent', border: 'none', boxShadow: 'none',
-                      color: '#ffffff', borderBottom: `2px solid ${dwMode === 'work' ? '#22d3ee' : '#a78bfa'}`,
-                      borderRadius: '0'
-                    }} 
-                  />
+                  <input type="number" autoFocus min="1" max="120" value={editInputValue} onChange={(e) => setEditInputValue(e.target.value)} onBlur={handleTimeSubmit} style={{ width: '120px', textAlign: 'center', fontSize: '3rem', padding: '10px', background: 'transparent', border: 'none', boxShadow: 'none', color: '#ffffff', borderBottom: `2px solid ${dwMode === 'work' ? '#22d3ee' : '#a78bfa'}`, borderRadius: '0' }} />
                 </form>
               ) : (
-                <motion.div 
-                  key={dwTimeLeft} // This key swap makes the number softly "tick" on change
-                  initial={{ opacity: 0.8, y: -2 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.2 }}
-                  className="clock-time" 
-                  style={{ 
-                    color: dwMode === 'work' ? '#22d3ee' : '#a78bfa',
-                    fontSize: 'clamp(4rem, 15vw, 6rem)',
-                    textShadow: dwMode === 'work' ? '0 0 20px rgba(34, 211, 238, 0.4)' : '0 0 20px rgba(167, 139, 250, 0.4)',
-                    fontFamily: "'SF Mono', 'Courier New', monospace",
-                    fontWeight: 800,
-                    letterSpacing: '2px'
-                  }}
-                >
+                <motion.div key={dwTimeLeft} initial={{ opacity: 0.8, y: -2 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2 }} className="clock-time" style={{ color: dwMode === 'work' ? '#22d3ee' : '#a78bfa', fontSize: 'clamp(4rem, 15vw, 6rem)', textShadow: dwMode === 'work' ? '0 0 20px rgba(34, 211, 238, 0.4)' : '0 0 20px rgba(167, 139, 250, 0.4)', fontFamily: "'SF Mono', 'Courier New', monospace", fontWeight: 800, letterSpacing: '2px' }}>
                   {formatDwTime(dwTimeLeft)}
                 </motion.div>
               )}
