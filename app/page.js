@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Hourglass, Target, Brain, Settings, Play, Pause, RotateCcw, Plus, Trash2, CheckCircle2, Circle } from 'lucide-react';
+import { Hourglass, Target, Brain, Settings, Play, Pause, RotateCcw, Plus, CheckCircle2, Circle, History, X } from 'lucide-react';
 
 export default function Home() {
   const [isMounted, setIsMounted] = useState(false);
@@ -17,21 +17,27 @@ export default function Home() {
   
   // --- LIFE TIMER STATE ---
   const [timerData, setTimerData] = useState({
-    timeString: '00:000:00:00:00',
+    years: '00',
+    days: '000',
+    hours: '00',
+    minutes: '00',
+    seconds: '00',
     livedPercent: 0,
     currentAge: 0,
     daysLeft: 0,
     hoursLeft: 0
   });
 
-  // --- TASKS STATE ---
+  // --- TASKS STATE (Urgent / Important / History) ---
   const [tasks, setTasks] = useState([]);
-  const [newTask, setNewTask] = useState('');
+  const [newUrgentTask, setNewUrgentTask] = useState('');
+  const [newImportantTask, setNewImportantTask] = useState('');
+  const [showHistory, setShowHistory] = useState(false);
 
   // --- DEEP WORK STATE ---
-  const [dwTimeLeft, setDwTimeLeft] = useState(25 * 60); // 25 minutes
+  const [dwTimeLeft, setDwTimeLeft] = useState(25 * 60);
   const [dwIsActive, setDwIsActive] = useState(false);
-  const [dwMode, setDwMode] = useState('work'); // 'work' or 'break'
+  const [dwMode, setDwMode] = useState('work');
 
   // --- INITIALIZATION ---
   useEffect(() => {
@@ -51,7 +57,7 @@ export default function Home() {
       setActiveTab('settings');
     }
 
-    const savedTasks = JSON.parse(localStorage.getItem('lifeTimer_tasks') || '[]');
+    const savedTasks = JSON.parse(localStorage.getItem('lifeTimer_pro_tasks') || '[]');
     setTasks(savedTasks);
   }, []);
 
@@ -83,7 +89,11 @@ export default function Home() {
         const days = daysRemaining % 365;
 
         setTimerData({
-          timeString: `${String(years).padStart(2, '0')}:${String(days).padStart(3, '0')}:${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`,
+          years: String(years).padStart(2, '0'),
+          days: String(days).padStart(3, '0'),
+          hours: String(hours).padStart(2, '0'),
+          minutes: String(minutes).padStart(2, '0'),
+          seconds: String(seconds).padStart(2, '0'),
           livedPercent: ((lived / (endOfLife - birthDate)) * 100).toFixed(4),
           currentAge: Math.floor((now - birthDate) / (365.25 * 24 * 60 * 60 * 1000)),
           daysLeft: daysRemaining,
@@ -104,7 +114,6 @@ export default function Home() {
       }, 1000);
     } else if (dwTimeLeft === 0) {
       setDwIsActive(false);
-      // Auto-switch mode
       if (dwMode === 'work') {
         setDwMode('break');
         setDwTimeLeft(5 * 60);
@@ -112,24 +121,20 @@ export default function Home() {
         setDwMode('work');
         setDwTimeLeft(25 * 60);
       }
-      // You could trigger a notification sound here in the future
     }
     return () => clearInterval(interval);
   }, [dwIsActive, dwTimeLeft, dwMode]);
 
   const toggleDwTimer = () => setDwIsActive(!dwIsActive);
-  
   const resetDwTimer = () => {
     setDwIsActive(false);
     setDwTimeLeft(dwMode === 'work' ? 25 * 60 : 5 * 60);
   };
-
   const switchDwMode = (mode) => {
     setDwIsActive(false);
     setDwMode(mode);
     setDwTimeLeft(mode === 'work' ? 25 * 60 : 5 * 60);
   };
-
   const formatDwTime = (seconds) => {
     const m = Math.floor(seconds / 60);
     const s = seconds % 60;
@@ -145,27 +150,39 @@ export default function Home() {
     setActiveTab('overview');
   };
 
-  const handleAddTask = () => {
-    if (tasks.filter(t => !t.done).length >= 3) return alert("Focus mode: Complete your current 3 primary tasks first.");
-    if (newTask.trim() === '') return;
+  const addTask = (type) => {
+    const text = type === 'urgent' ? newUrgentTask : newImportantTask;
+    if (text.trim() === '') return;
     
-    const updatedTasks = [...tasks, { id: Date.now(), text: newTask, done: false }];
+    const updatedTasks = [{ id: Date.now(), text, type, done: false, completedAt: null }, ...tasks];
     setTasks(updatedTasks);
-    localStorage.setItem('lifeTimer_tasks', JSON.stringify(updatedTasks));
-    setNewTask('');
-  };
-
-  const deleteTask = (id) => {
-    const updatedTasks = tasks.filter(t => t.id !== id);
-    setTasks(updatedTasks);
-    localStorage.setItem('lifeTimer_tasks', JSON.stringify(updatedTasks));
+    localStorage.setItem('lifeTimer_pro_tasks', JSON.stringify(updatedTasks));
+    
+    if (type === 'urgent') setNewUrgentTask('');
+    else setNewImportantTask('');
   };
 
   const toggleTask = (id) => {
-    const updatedTasks = tasks.map(t => t.id === id ? { ...t, done: !t.done } : t);
+    const updatedTasks = tasks.map(t => {
+      if (t.id === id) {
+        return { ...t, done: !t.done, completedAt: !t.done ? Date.now() : null };
+      }
+      return t;
+    });
     setTasks(updatedTasks);
-    localStorage.setItem('lifeTimer_tasks', JSON.stringify(updatedTasks));
+    localStorage.setItem('lifeTimer_pro_tasks', JSON.stringify(updatedTasks));
   };
+
+  const permanentlyDeleteTask = (id) => {
+    const updatedTasks = tasks.filter(t => t.id !== id);
+    setTasks(updatedTasks);
+    localStorage.setItem('lifeTimer_pro_tasks', JSON.stringify(updatedTasks));
+  };
+
+  // Filter tasks for UI
+  const activeUrgent = tasks.filter(t => t.type === 'urgent' && !t.done);
+  const activeImportant = tasks.filter(t => t.type === 'important' && !t.done);
+  const historyTasks = tasks.filter(t => t.done).sort((a, b) => b.completedAt - a.completedAt);
 
   // --- ANIMATION VARIANTS ---
   const pageVariants = {
@@ -183,7 +200,7 @@ export default function Home() {
         {/* --- SETTINGS SCREEN --- */}
         {activeTab === 'settings' && (
           <motion.div key="settings" initial="initial" animate="in" exit="out" variants={pageVariants} transition={{ duration: 0.3 }} className="setup">
-            <Settings size={48} color="#64748b" style={{ margin: '0 auto 15px auto' }} />
+            <Settings size={48} color="#475569" style={{ margin: '0 auto 15px auto' }} />
             <h1>System Configuration</h1>
             <p className="subtitle">Initialize your temporal parameters.</p>
             
@@ -209,9 +226,32 @@ export default function Home() {
         {/* --- OVERVIEW SCREEN (LIFE TIMER) --- */}
         {activeTab === 'overview' && (
           <motion.div key="overview" initial="initial" animate="in" exit="out" variants={pageVariants} transition={{ duration: 0.3 }} className="timer">
+            
             <div className="clock-display">
-              <div className="clock-time">{timerData.timeString}</div>
-              <div className="clock-label">YRS : DYS : HRS : MIN : SEC</div>
+              <div className="time-block">
+                <span className="time-value">{timerData.years}</span>
+                <span className="time-label">YRS</span>
+              </div>
+              <span className="time-separator">:</span>
+              <div className="time-block">
+                <span className="time-value">{timerData.days}</span>
+                <span className="time-label">DYS</span>
+              </div>
+              <span className="time-separator">:</span>
+              <div className="time-block">
+                <span className="time-value">{timerData.hours}</span>
+                <span className="time-label">HRS</span>
+              </div>
+              <span className="time-separator">:</span>
+              <div className="time-block">
+                <span className="time-value">{timerData.minutes}</span>
+                <span className="time-label">MIN</span>
+              </div>
+              <span className="time-separator">:</span>
+              <div className="time-block">
+                <span className="time-value">{timerData.seconds}</span>
+                <span className="time-label">SEC</span>
+              </div>
             </div>
             
             <div className="progress-section">
@@ -241,57 +281,94 @@ export default function Home() {
         {/* --- TASKS SCREEN --- */}
         {activeTab === 'tasks' && (
           <motion.div key="tasks" initial="initial" animate="in" exit="out" variants={pageVariants} transition={{ duration: 0.3 }} className="tasks">
-            <div className="header-container" style={{ textAlign: 'center', marginBottom: '30px' }}>
-              <h2>Execution Queue</h2>
-              <p className="subtitle">Max capacity: 3 active directives.</p>
-            </div>
-
-            <div className="task-input-container" style={{ display: 'flex', gap: '10px', marginBottom: '30px' }}>
-              <input 
-                type="text" 
-                value={newTask}
-                onChange={(e) => setNewTask(e.target.value)}
-                placeholder="Enter directive..."
-                onKeyDown={(e) => e.key === 'Enter' && handleAddTask()}
-              />
-              <button onClick={handleAddTask} style={{ width: '60px', padding: '0', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-                <Plus size={24} />
+            
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+              <div>
+                <h2>Execution Queue</h2>
+                <p className="subtitle">Matrix Priorities</p>
+              </div>
+              <button 
+                onClick={() => setShowHistory(!showHistory)}
+                style={{ width: 'auto', padding: '10px 16px', background: showHistory ? 'rgba(34, 211, 238, 0.15)' : 'transparent', border: '1px solid rgba(255,255,255,0.1)', boxShadow: 'none', color: showHistory ? '#22d3ee' : '#64748b', display: 'flex', gap: '8px', alignItems: 'center', borderRadius: '10px' }}
+              >
+                <History size={18} />
+                <span style={{ fontSize: '0.8rem' }}>Log</span>
               </button>
             </div>
 
-            <ul className="task-list" style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '15px' }}>
-              <AnimatePresence>
-                {tasks.map(task => (
-                  <motion.li 
-                    key={task.id} 
-                    initial={{ opacity: 0, x: -20 }} 
-                    animate={{ opacity: 1, x: 0 }} 
-                    exit={{ opacity: 0, x: 20 }}
-                    style={{ 
-                      background: 'rgba(20, 22, 31, 0.6)', border: '1px solid rgba(255,255,255,0.05)', 
-                      borderRadius: '12px', padding: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center'
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '15px', cursor: 'pointer' }} onClick={() => toggleTask(task.id)}>
-                      {task.done ? <CheckCircle2 color="#64748b" /> : <Circle color="#ff6b6b" />}
-                      <span style={{ 
-                        fontSize: '1.05rem', 
-                        color: task.done ? '#64748b' : '#ffffff', 
-                        textDecoration: task.done ? 'line-through' : 'none',
-                        transition: 'all 0.3s'
-                      }}>
-                        {task.text}
-                      </span>
-                    </div>
-                    <Trash2 color="#64748b" size={20} style={{ cursor: 'pointer' }} onClick={() => deleteTask(task.id)} />
-                  </motion.li>
-                ))}
-              </AnimatePresence>
-            </ul>
+            {showHistory ? (
+              /* HISTORY LOG */
+              <div className="task-section">
+                <h3 style={{ color: '#64748b', marginBottom: '15px' }}>Completed Directives</h3>
+                {historyTasks.length === 0 ? <p style={{ color: '#475569', fontSize: '0.9rem', textAlign: 'center' }}>No log data found.</p> : null}
+                <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  <AnimatePresence>
+                    {historyTasks.map(task => (
+                      <motion.li key={task.id} initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(2, 6, 23, 0.5)', padding: '12px 16px', borderRadius: '8px', borderLeft: task.type === 'urgent' ? '3px solid #ef4444' : '3px solid #3b82f6' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                          <CheckCircle2 color="#475569" size={18} />
+                          <span style={{ color: '#64748b', textDecoration: 'line-through', fontSize: '0.95rem' }}>{task.text}</span>
+                        </div>
+                        <X color="#475569" size={16} style={{ cursor: 'pointer' }} onClick={() => permanentlyDeleteTask(task.id)} />
+                      </motion.li>
+                    ))}
+                  </AnimatePresence>
+                </ul>
+              </div>
+            ) : (
+              /* ACTIVE MATRIX */
+              <>
+                {/* URGENT SECTION */}
+                <div className="task-section" style={{ borderLeft: '3px solid #ef4444' }}>
+                  <h3>Urgent (Do First)</h3>
+                  <div className="task-input-container">
+                    <input type="text" value={newUrgentTask} onChange={(e) => setNewUrgentTask(e.target.value)} placeholder="High priority directive..." onKeyDown={(e) => e.key === 'Enter' && addTask('urgent')} style={{ padding: '12px 16px' }}/>
+                    <button onClick={() => addTask('urgent')} style={{ width: '50px', padding: '0', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                      <Plus size={20} />
+                    </button>
+                  </div>
+                  <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    <AnimatePresence>
+                      {activeUrgent.map(task => (
+                        <motion.li key={task.id} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(2, 6, 23, 0.5)', padding: '14px 16px', borderRadius: '10px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '15px', cursor: 'pointer' }} onClick={() => toggleTask(task.id)}>
+                            <Circle color="#ef4444" size={20} />
+                            <span style={{ fontSize: '1rem', color: '#ffffff' }}>{task.text}</span>
+                          </div>
+                        </motion.li>
+                      ))}
+                    </AnimatePresence>
+                  </ul>
+                </div>
+
+                {/* IMPORTANT SECTION */}
+                <div className="task-section" style={{ borderLeft: '3px solid #3b82f6' }}>
+                  <h3>Important (Schedule)</h3>
+                  <div className="task-input-container">
+                    <input type="text" value={newImportantTask} onChange={(e) => setNewImportantTask(e.target.value)} placeholder="Long-term directive..." onKeyDown={(e) => e.key === 'Enter' && addTask('important')} style={{ padding: '12px 16px' }}/>
+                    <button onClick={() => addTask('important')} style={{ width: '50px', padding: '0', display: 'flex', justifyContent: 'center', alignItems: 'center', background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)', borderTopColor: '#60a5fa' }}>
+                      <Plus size={20} />
+                    </button>
+                  </div>
+                  <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    <AnimatePresence>
+                      {activeImportant.map(task => (
+                        <motion.li key={task.id} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(2, 6, 23, 0.5)', padding: '14px 16px', borderRadius: '10px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '15px', cursor: 'pointer' }} onClick={() => toggleTask(task.id)}>
+                            <Circle color="#3b82f6" size={20} />
+                            <span style={{ fontSize: '1rem', color: '#ffffff' }}>{task.text}</span>
+                          </div>
+                        </motion.li>
+                      ))}
+                    </AnimatePresence>
+                  </ul>
+                </div>
+              </>
+            )}
           </motion.div>
         )}
 
-        {/* --- DEEP WORK SCREEN (NEW) --- */}
+        {/* --- DEEP WORK SCREEN --- */}
         {activeTab === 'deepwork' && (
           <motion.div key="deepwork" initial="initial" animate="in" exit="out" variants={pageVariants} transition={{ duration: 0.3 }} style={{ textAlign: 'center' }}>
              <div className="header-container" style={{ marginBottom: '30px' }}>
@@ -299,52 +376,42 @@ export default function Home() {
               <p className="subtitle">Isolate focus. Execute.</p>
             </div>
 
-            {/* Mode Selectors */}
             <div style={{ display: 'flex', justifyContent: 'center', gap: '10px', marginBottom: '30px' }}>
               <button 
                 onClick={() => switchDwMode('work')}
-                style={{ 
-                  padding: '10px 20px', fontSize: '0.8rem', 
-                  background: dwMode === 'work' ? 'rgba(255, 107, 107, 0.15)' : 'transparent',
-                  border: dwMode === 'work' ? '1px solid #ff6b6b' : '1px solid rgba(255,255,255,0.1)',
-                  boxShadow: 'none', color: dwMode === 'work' ? '#ff6b6b' : '#64748b'
-                }}>
-                FOCUS (25m)
+                style={{ padding: '10px 20px', fontSize: '0.8rem', background: dwMode === 'work' ? 'rgba(6, 182, 212, 0.15)' : 'transparent', border: dwMode === 'work' ? '1px solid #06b6d4' : '1px solid rgba(255,255,255,0.1)', boxShadow: 'none', color: dwMode === 'work' ? '#22d3ee' : '#64748b' }}>
+                FOCUS
               </button>
               <button 
                 onClick={() => switchDwMode('break')}
-                style={{ 
-                  padding: '10px 20px', fontSize: '0.8rem', 
-                  background: dwMode === 'break' ? 'rgba(56, 189, 248, 0.15)' : 'transparent',
-                  border: dwMode === 'break' ? '1px solid #38bdf8' : '1px solid rgba(255,255,255,0.1)',
-                  boxShadow: 'none', color: dwMode === 'break' ? '#38bdf8' : '#64748b'
-                }}>
-                REST (5m)
+                style={{ padding: '10px 20px', fontSize: '0.8rem', background: dwMode === 'break' ? 'rgba(139, 92, 246, 0.15)' : 'transparent', border: dwMode === 'break' ? '1px solid #8b5cf6' : '1px solid rgba(255,255,255,0.1)', boxShadow: 'none', color: dwMode === 'break' ? '#a78bfa' : '#64748b' }}>
+                REST
               </button>
             </div>
 
-            {/* Main Timer Display */}
             <div className="clock-display" style={{ 
-              borderColor: dwMode === 'work' ? 'rgba(255, 107, 107, 0.3)' : 'rgba(56, 189, 248, 0.3)',
+              borderColor: dwMode === 'work' ? 'rgba(6, 182, 212, 0.3)' : 'rgba(139, 92, 246, 0.3)',
               boxShadow: dwMode === 'work' 
-                ? '0 20px 40px rgba(0,0,0,0.5), inset 0 0 40px rgba(255, 107, 107, 0.05)' 
-                : '0 20px 40px rgba(0,0,0,0.5), inset 0 0 40px rgba(56, 189, 248, 0.05)'
+                ? '0 20px 40px rgba(0,0,0,0.5), inset 0 0 40px rgba(6, 182, 212, 0.05)' 
+                : '0 20px 40px rgba(0,0,0,0.5), inset 0 0 40px rgba(139, 92, 246, 0.05)'
             }}>
               <div className="clock-time" style={{ 
-                color: dwMode === 'work' ? '#ff6b6b' : '#38bdf8',
+                color: dwMode === 'work' ? '#22d3ee' : '#a78bfa',
                 fontSize: 'clamp(4rem, 15vw, 6rem)',
-                textShadow: dwMode === 'work' ? '0 0 20px rgba(255, 107, 107, 0.4)' : '0 0 20px rgba(56, 189, 248, 0.4)'
+                textShadow: dwMode === 'work' ? '0 0 20px rgba(34, 211, 238, 0.4)' : '0 0 20px rgba(167, 139, 250, 0.4)',
+                fontFamily: "'SF Mono', 'Courier New', monospace",
+                fontWeight: 800,
+                letterSpacing: '2px'
               }}>
                 {formatDwTime(dwTimeLeft)}
               </div>
             </div>
 
-            {/* Controls */}
             <div style={{ display: 'flex', justifyContent: 'center', gap: '20px', marginTop: '30px' }}>
               <button onClick={toggleDwTimer} style={{ width: '80px', height: '80px', borderRadius: '40px', display: 'flex', justifyContent: 'center', alignItems: 'center', padding: 0 }}>
                 {dwIsActive ? <Pause size={32} fill="white" /> : <Play size={32} fill="white" style={{ marginLeft: '6px' }} />}
               </button>
-              <button onClick={resetDwTimer} style={{ width: '80px', height: '80px', borderRadius: '40px', background: 'rgba(20, 22, 31, 0.8)', border: '1px solid rgba(255,255,255,0.1)', display: 'flex', justifyContent: 'center', alignItems: 'center', padding: 0, boxShadow: 'none' }}>
+              <button onClick={resetDwTimer} style={{ width: '80px', height: '80px', borderRadius: '40px', background: 'rgba(15, 23, 42, 0.8)', border: '1px solid rgba(255,255,255,0.1)', display: 'flex', justifyContent: 'center', alignItems: 'center', padding: 0, boxShadow: 'none' }}>
                 <RotateCcw size={28} color="#64748b" />
               </button>
             </div>
