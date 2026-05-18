@@ -13,6 +13,14 @@ const QUOTES = [
   "Amateurs sit and wait for inspiration, the rest of us just get up and go to work."
 ];
 
+// Helper to format timestamps beautifully
+const formatTimestamp = (timestamp) => {
+  if (!timestamp) return '';
+  const d = new Date(timestamp);
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' at ' + 
+         d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+};
+
 export default function Home() {
   const [isMounted, setIsMounted] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
@@ -28,36 +36,30 @@ export default function Home() {
     restTime: 5
   });
   
-  // Controls whether we show the read-only Profile or the Input Form
   const [isEditingSettings, setIsEditingSettings] = useState(false);
   
   const [timerData, setTimerData] = useState({
     timeString: '00:000:00:00:00', livedPercent: 0, currentAge: 0, daysLeft: 0, hoursLeft: 0
   });
 
-  // --- TASKS STATE (Urgent / Important / History) ---
+  // --- TASKS STATE ---
   const [tasks, setTasks] = useState([]);
   const [newUrgentTask, setNewUrgentTask] = useState('');
   const [newImportantTask, setNewImportantTask] = useState('');
   const [showHistory, setShowHistory] = useState(false);
-  const [queueTab, setQueueTab] = useState('urgent');
 
+  // --- DEEP WORK STATE ---
   const [dwTimeLeft, setDwTimeLeft] = useState(25 * 60); 
   const [dwIsActive, setDwIsActive] = useState(false);
   const [dwMode, setDwMode] = useState('work'); 
+  const [focusSubject, setFocusSubject] = useState(''); // NEW: What are you focusing on?
+  const [focusLogs, setFocusLogs] = useState([]);       // NEW: History of focus sessions
+  const [showFocusHistory, setShowFocusHistory] = useState(false);
 
-// --- INITIALIZATION ---
   useEffect(() => {
     setIsMounted(true);
     setCurrentQuote(QUOTES[Math.floor(Math.random() * QUOTES.length)]);
 
-    // --- ADD THIS NEW BLOCK HERE FOR THE PWA ICON & OFFLINE SUPPORT ---
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/sw.js')
-        .then(reg => console.log('Service Worker Registered!', reg))
-        .catch(err => console.error('Service Worker Registration Failed!', err));
-    }
-    // ------------------------------------------------------------------
     const savedName = localStorage.getItem('lifeTimer_name');
     const savedBD = localStorage.getItem('lifeTimer_birthdate');
     const savedLE = localStorage.getItem('lifeTimer_lifeExpectancy');
@@ -76,17 +78,21 @@ export default function Home() {
         restTime: savedRT ? parseInt(savedRT) : 5
       });
       setDwTimeLeft(parsedFT * 60);
-      setIsEditingSettings(false); // Valid user, default to read-only profile
+      setIsEditingSettings(false);
       setActiveTab('overview');
     } else {
-      setIsEditingSettings(true); // New user, force edit mode
+      setIsEditingSettings(true);
       setActiveTab('settings');
     }
 
     const savedTasks = JSON.parse(localStorage.getItem('lifeTimer_tasks') || '[]');
     setTasks(savedTasks);
+    
+    const savedFocusLogs = JSON.parse(localStorage.getItem('lifeTimer_focusLogs') || '[]');
+    setFocusLogs(savedFocusLogs);
   }, []);
 
+  // Life Timer Interval
   useEffect(() => {
     if (!settings.birthdate || activeTab === 'settings') return;
     const interval = setInterval(() => {
@@ -120,22 +126,39 @@ export default function Home() {
     return () => clearInterval(interval);
   }, [settings, activeTab]);
 
+  // Deep Work Timer Interval & Auto-Logging
   useEffect(() => {
     let interval = null;
     if (dwIsActive && dwTimeLeft > 0) {
       interval = setInterval(() => setDwTimeLeft(time => time - 1), 1000);
-    } else if (dwTimeLeft === 0) {
+    } else if (dwTimeLeft === 0 && dwIsActive) {
       setDwIsActive(false);
+      
+      // If a work session finishes, log it automatically
       if (dwMode === 'work') {
+        const newLog = {
+          id: Date.now(),
+          subject: focusSubject.trim() !== '' ? focusSubject : 'Undocumented Deep Work',
+          duration: settings.focusTime,
+          completedAt: Date.now()
+        };
+        
+        setFocusLogs(prev => {
+          const updated = [newLog, ...prev];
+          localStorage.setItem('lifeTimer_focusLogs', JSON.stringify(updated));
+          return updated;
+        });
+        
         setDwMode('break');
         setDwTimeLeft(settings.restTime * 60);
+        setFocusSubject(''); // Reset subject for the next session
       } else {
         setDwMode('work');
         setDwTimeLeft(settings.focusTime * 60);
       }
     }
     return () => clearInterval(interval);
-  }, [dwIsActive, dwTimeLeft, dwMode, settings]);
+  }, [dwIsActive, dwTimeLeft, dwMode, settings, focusSubject]);
 
   const toggleDwTimer = () => setDwIsActive(!dwIsActive);
   const resetDwTimer = () => {
@@ -151,6 +174,11 @@ export default function Home() {
     const m = Math.floor(seconds / 60);
     const s = seconds % 60;
     return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+  };
+  const deleteFocusLog = (id) => {
+    const updated = focusLogs.filter(log => log.id !== id);
+    setFocusLogs(updated);
+    localStorage.setItem('lifeTimer_focusLogs', JSON.stringify(updated));
   };
 
   const saveSettings = () => {
@@ -223,8 +251,6 @@ export default function Home() {
 
       <div className="container">
         
-        {/* --- GLOBAL QUOTE --- */}
-        {/* Displayed on all operational tabs, hidden during setup/profile */}
         {settings.birthdate && activeTab !== 'settings' && (
           <motion.div className="quote-container" initial={{opacity: 0, y: 10}} animate={{opacity: 1, y: 0}} transition={{delay: 0.2, duration: 0.8}}>
             <p className="quote-text">"{currentQuote}"</p>
@@ -238,7 +264,6 @@ export default function Home() {
             <motion.div key="settings" initial="initial" animate="in" exit="out" variants={pageVariants} transition={{ duration: 0.3 }} className="setup">
               
               {!isEditingSettings ? (
-                /* --- READ-ONLY PROFILE VIEW --- */
                 <div style={{ textAlign: 'center' }}>
                   <Hexagon size={56} color="#06b6d4" strokeWidth={1.5} style={{ margin: '0 auto 15px auto' }} />
                   <h1 style={{ fontSize: '2.4rem', marginBottom: '5px' }}>Hello, {settings.name}.</h1>
@@ -262,7 +287,6 @@ export default function Home() {
                   <button onClick={() => setIsEditingSettings(true)}>CONFIGURE SYSTEM</button>
                 </div>
               ) : (
-                /* --- EDITABLE CONFIGURATION FORM --- */
                 <div style={{ textAlign: 'center' }}>
                   <h1>System Configuration</h1>
                   <p className="subtitle">Initialize your temporal parameters.</p>
@@ -299,8 +323,6 @@ export default function Home() {
                   </div>
                   
                   <button onClick={saveSettings} style={{ marginTop: '10px' }}>{localStorage.getItem('lifeTimer_birthdate') ? 'SAVE PARAMETERS' : 'INITIALIZE SYSTEM'}</button>
-                  
-                  {/* Allow canceling edit if a valid profile exists */}
                   {localStorage.getItem('lifeTimer_birthdate') && (
                      <button className="secondary" onClick={() => setIsEditingSettings(false)}>CANCEL</button>
                   )}
@@ -354,7 +376,7 @@ export default function Home() {
             </motion.div>
           )}
 
-          {/* --- TASKS SCREEN (MATRIX LAYOUT) --- */}
+          {/* --- TASKS SCREEN --- */}
           {activeTab === 'tasks' && (
             <motion.div key="tasks" initial="initial" animate="in" exit="out" variants={pageVariants} transition={{ duration: 0.3 }} className="tasks">
               
@@ -381,9 +403,12 @@ export default function Home() {
                     <AnimatePresence>
                       {historyTasks.map(task => (
                         <motion.li key={task.id} initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(30, 41, 59, 0.3)', padding: '14px 16px', borderRadius: '12px', borderLeft: task.type === 'urgent' ? '3px solid rgba(6, 182, 212, 0.5)' : '3px solid rgba(139, 92, 246, 0.5)' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                            <CheckCircle2 color="#475569" size={18} />
-                            <span style={{ color: '#64748b', textDecoration: 'line-through', fontSize: '0.95rem' }}>{task.text}</span>
+                          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+                            <CheckCircle2 color="#475569" size={18} style={{ marginTop: '2px' }}/>
+                            <div style={{ display: 'flex', flexDirection: 'column' }}>
+                              <span style={{ color: '#64748b', textDecoration: 'line-through', fontSize: '0.95rem' }}>{task.text}</span>
+                              <span style={{ color: '#475569', fontSize: '0.75rem', marginTop: '4px' }}>{formatTimestamp(task.completedAt)}</span>
+                            </div>
                           </div>
                           <X color="#475569" size={18} style={{ cursor: 'pointer', transition: 'color 0.2s' }} onClick={() => deleteTask(task.id)} onMouseOver={(e) => e.target.style.color = '#ef4444'} onMouseOut={(e) => e.target.style.color = '#475569'} />
                         </motion.li>
@@ -411,9 +436,12 @@ export default function Home() {
                       <AnimatePresence>
                         {activeUrgent.map(task => (
                           <motion.li key={task.id} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(30, 41, 59, 0.4)', border: '1px solid rgba(255,255,255,0.05)', padding: '14px 16px', borderRadius: '12px' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '15px', cursor: 'pointer' }} onClick={() => toggleTask(task.id)}>
-                              <Circle color="#06b6d4" size={20} />
-                              <span style={{ fontSize: '1rem', color: '#ffffff' }}>{task.text}</span>
+                            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '15px', cursor: 'pointer' }} onClick={() => toggleTask(task.id)}>
+                              <Circle color="#06b6d4" size={20} style={{ marginTop: '2px' }}/>
+                              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                <span style={{ fontSize: '1rem', color: '#ffffff' }}>{task.text}</span>
+                                <span style={{ color: '#475569', fontSize: '0.75rem', marginTop: '4px' }}>Added: {formatTimestamp(task.id)}</span>
+                              </div>
                             </div>
                           </motion.li>
                         ))}
@@ -437,9 +465,12 @@ export default function Home() {
                       <AnimatePresence>
                         {activeImportant.map(task => (
                           <motion.li key={task.id} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(30, 41, 59, 0.4)', border: '1px solid rgba(255,255,255,0.05)', padding: '14px 16px', borderRadius: '12px' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '15px', cursor: 'pointer' }} onClick={() => toggleTask(task.id)}>
-                              <Circle color="#8b5cf6" size={20} />
-                              <span style={{ fontSize: '1rem', color: '#ffffff' }}>{task.text}</span>
+                            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '15px', cursor: 'pointer' }} onClick={() => toggleTask(task.id)}>
+                              <Circle color="#8b5cf6" size={20} style={{ marginTop: '2px' }}/>
+                              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                <span style={{ fontSize: '1rem', color: '#ffffff' }}>{task.text}</span>
+                                <span style={{ color: '#475569', fontSize: '0.75rem', marginTop: '4px' }}>Added: {formatTimestamp(task.id)}</span>
+                              </div>
                             </div>
                           </motion.li>
                         ))}
@@ -455,57 +486,93 @@ export default function Home() {
           {/* --- DEEP WORK SCREEN --- */}
           {activeTab === 'deepwork' && (
             <motion.div key="deepwork" initial="initial" animate="in" exit="out" variants={pageVariants} transition={{ duration: 0.3 }} style={{ textAlign: 'center' }}>
-               <div className="header-container" style={{ marginBottom: '30px' }}>
-                <h2>Deep Work Protocol</h2>
-                <p className="subtitle">Isolate focus. Execute.</p>
-              </div>
-
-              <div style={{ display: 'flex', justifyContent: 'center', gap: '10px', marginBottom: '30px' }}>
-                <button 
-                  onClick={() => switchDwMode('work')}
-                  style={{ 
-                    padding: '10px 20px', fontSize: '0.8rem', 
-                    background: dwMode === 'work' ? 'rgba(6, 182, 212, 0.15)' : 'transparent',
-                    border: dwMode === 'work' ? '1px solid #06b6d4' : '1px solid rgba(255,255,255,0.1)',
-                    boxShadow: 'none', color: dwMode === 'work' ? '#06b6d4' : '#64748b'
-                  }}>
-                  FOCUS ({settings.focusTime}m)
-                </button>
-                <button 
-                  onClick={() => switchDwMode('break')}
-                  style={{ 
-                    padding: '10px 20px', fontSize: '0.8rem', 
-                    background: dwMode === 'break' ? 'rgba(139, 92, 246, 0.15)' : 'transparent',
-                    border: dwMode === 'break' ? '1px solid #8b5cf6' : '1px solid rgba(255,255,255,0.1)',
-                    boxShadow: 'none', color: dwMode === 'break' ? '#8b5cf6' : '#64748b'
-                  }}>
-                  REST ({settings.restTime}m)
-                </button>
-              </div>
-
-              <div className="clock-display" style={{ 
-                borderColor: dwMode === 'work' ? 'rgba(6, 182, 212, 0.3)' : 'rgba(139, 92, 246, 0.3)',
-                boxShadow: dwMode === 'work' 
-                  ? '0 20px 40px rgba(0,0,0,0.5), inset 0 0 40px rgba(6, 182, 212, 0.05)' 
-                  : '0 20px 40px rgba(0,0,0,0.5), inset 0 0 40px rgba(139, 92, 246, 0.05)'
-              }}>
-                <div className="clock-time" style={{ 
-                  color: dwMode === 'work' ? '#06b6d4' : '#8b5cf6',
-                  fontSize: 'clamp(4rem, 15vw, 6rem)',
-                  textShadow: dwMode === 'work' ? '0 0 20px rgba(6, 182, 212, 0.4)' : '0 0 20px rgba(139, 92, 246, 0.4)'
-                }}>
-                  {formatDwTime(dwTimeLeft)}
+               
+               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
+                <div style={{ textAlign: 'left' }}>
+                  <h2 style={{ fontSize: '1.8rem', background: 'linear-gradient(180deg, #ffffff 0%, #94a3b8 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Deep Work Protocol</h2>
+                  <p className="subtitle" style={{ marginTop: '2px' }}>Isolate focus. Execute.</p>
                 </div>
+                <button 
+                  onClick={() => setShowFocusHistory(!showFocusHistory)}
+                  style={{ width: 'auto', padding: '10px 16px', background: showFocusHistory ? 'rgba(6, 182, 212, 0.15)' : 'rgba(30, 41, 59, 0.4)', border: showFocusHistory ? '1px solid #06b6d4' : '1px solid rgba(255,255,255,0.05)', boxShadow: 'none', color: showFocusHistory ? '#06b6d4' : '#94a3b8', display: 'flex', gap: '8px', alignItems: 'center', borderRadius: '12px' }}
+                >
+                  <History size={18} />
+                  <span style={{ fontSize: '0.8rem', fontWeight: 600 }}>Log</span>
+                </button>
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'center', gap: '20px', marginTop: '30px' }}>
-                <button onClick={toggleDwTimer} style={{ width: '80px', height: '80px', borderRadius: '40px', display: 'flex', justifyContent: 'center', alignItems: 'center', padding: 0 }}>
-                  {dwIsActive ? <Pause size={32} fill="white" /> : <Play size={32} fill="white" style={{ marginLeft: '6px' }} />}
-                </button>
-                <button onClick={resetDwTimer} style={{ width: '80px', height: '80px', borderRadius: '40px', background: 'rgba(30, 41, 59, 0.8)', border: '1px solid rgba(255,255,255,0.1)', display: 'flex', justifyContent: 'center', alignItems: 'center', padding: 0, boxShadow: 'none' }}>
-                  <RotateCcw size={28} color="#64748b" />
-                </button>
-              </div>
+              {showFocusHistory ? (
+                /* --- FOCUS HISTORY LOG --- */
+                <div className="task-section" style={{ textAlign: 'left' }}>
+                  <h3 style={{ color: '#94a3b8', marginBottom: '15px', fontSize: '1.1rem' }}>Completed Sessions</h3>
+                  {focusLogs.length === 0 ? <p style={{ color: '#475569', fontSize: '0.9rem', textAlign: 'center', marginTop: '20px' }}>No deep work recorded yet.</p> : null}
+                  <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    <AnimatePresence>
+                      {focusLogs.map(log => (
+                        <motion.li key={log.id} initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(30, 41, 59, 0.3)', padding: '14px 16px', borderRadius: '12px', borderLeft: '3px solid rgba(6, 182, 212, 0.5)' }}>
+                          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+                            <Brain color="#06b6d4" size={18} style={{ marginTop: '2px' }}/>
+                            <div style={{ display: 'flex', flexDirection: 'column' }}>
+                              <span style={{ color: '#e2e8f0', fontSize: '0.95rem', fontWeight: 500 }}>{log.subject} <span style={{ color: '#06b6d4' }}>({log.duration}m)</span></span>
+                              <span style={{ color: '#475569', fontSize: '0.75rem', marginTop: '4px' }}>{formatTimestamp(log.completedAt)}</span>
+                            </div>
+                          </div>
+                          <X color="#475569" size={18} style={{ cursor: 'pointer', transition: 'color 0.2s' }} onClick={() => deleteFocusLog(log.id)} onMouseOver={(e) => e.target.style.color = '#ef4444'} onMouseOut={(e) => e.target.style.color = '#475569'} />
+                        </motion.li>
+                      ))}
+                    </AnimatePresence>
+                  </ul>
+                </div>
+              ) : (
+                /* --- ACTIVE TIMER VIEW --- */
+                <>
+                  <input 
+                    type="text" 
+                    value={focusSubject}
+                    onChange={(e) => setFocusSubject(e.target.value)}
+                    placeholder="What is your objective?"
+                    disabled={dwIsActive}
+                    style={{ padding: '14px 16px', background: 'rgba(30, 41, 59, 0.4)', textAlign: 'center', marginBottom: '25px', opacity: dwIsActive ? 0.5 : 1 }}
+                  />
+
+                  <div style={{ display: 'flex', justifyContent: 'center', gap: '10px', marginBottom: '30px' }}>
+                    <button 
+                      onClick={() => switchDwMode('work')}
+                      style={{ padding: '10px 20px', fontSize: '0.8rem', background: dwMode === 'work' ? 'rgba(6, 182, 212, 0.15)' : 'transparent', border: dwMode === 'work' ? '1px solid #06b6d4' : '1px solid rgba(255,255,255,0.1)', boxShadow: 'none', color: dwMode === 'work' ? '#06b6d4' : '#64748b' }}>
+                      FOCUS ({settings.focusTime}m)
+                    </button>
+                    <button 
+                      onClick={() => switchDwMode('break')}
+                      style={{ padding: '10px 20px', fontSize: '0.8rem', background: dwMode === 'break' ? 'rgba(139, 92, 246, 0.15)' : 'transparent', border: dwMode === 'break' ? '1px solid #8b5cf6' : '1px solid rgba(255,255,255,0.1)', boxShadow: 'none', color: dwMode === 'break' ? '#8b5cf6' : '#64748b' }}>
+                      REST ({settings.restTime}m)
+                    </button>
+                  </div>
+
+                  <div className="clock-display" style={{ 
+                    borderColor: dwMode === 'work' ? 'rgba(6, 182, 212, 0.3)' : 'rgba(139, 92, 246, 0.3)',
+                    boxShadow: dwMode === 'work' 
+                      ? '0 20px 40px rgba(0,0,0,0.5), inset 0 0 40px rgba(6, 182, 212, 0.05)' 
+                      : '0 20px 40px rgba(0,0,0,0.5), inset 0 0 40px rgba(139, 92, 246, 0.05)'
+                  }}>
+                    <div className="clock-time" style={{ 
+                      color: dwMode === 'work' ? '#06b6d4' : '#8b5cf6',
+                      fontSize: 'clamp(4rem, 15vw, 6rem)',
+                      textShadow: dwMode === 'work' ? '0 0 20px rgba(6, 182, 212, 0.4)' : '0 0 20px rgba(139, 92, 246, 0.4)'
+                    }}>
+                      {formatDwTime(dwTimeLeft)}
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', justifyContent: 'center', gap: '20px', marginTop: '30px' }}>
+                    <button onClick={toggleDwTimer} style={{ width: '80px', height: '80px', borderRadius: '40px', display: 'flex', justifyContent: 'center', alignItems: 'center', padding: 0 }}>
+                      {dwIsActive ? <Pause size={32} fill="white" /> : <Play size={32} fill="white" style={{ marginLeft: '6px' }} />}
+                    </button>
+                    <button onClick={resetDwTimer} style={{ width: '80px', height: '80px', borderRadius: '40px', background: 'rgba(30, 41, 59, 0.8)', border: '1px solid rgba(255,255,255,0.1)', display: 'flex', justifyContent: 'center', alignItems: 'center', padding: 0, boxShadow: 'none' }}>
+                      <RotateCcw size={28} color="#64748b" />
+                    </button>
+                  </div>
+                </>
+              )}
             </motion.div>
           )}
 
