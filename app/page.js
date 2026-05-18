@@ -1,16 +1,21 @@
 "use client";
 
 import { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Hourglass, Target, Brain, Settings, Play, Pause, RotateCcw, Plus, Trash2, CheckCircle2, Circle } from 'lucide-react';
 
 export default function Home() {
   const [isMounted, setIsMounted] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
+  
+  // --- SETTINGS STATE ---
   const [settings, setSettings] = useState({
     birthdate: '',
     lifeExpectancy: 73.4,
     timezone: 5.5
   });
   
+  // --- LIFE TIMER STATE ---
   const [timerData, setTimerData] = useState({
     timeString: '00:000:00:00:00',
     livedPercent: 0,
@@ -19,9 +24,16 @@ export default function Home() {
     hoursLeft: 0
   });
 
+  // --- TASKS STATE ---
   const [tasks, setTasks] = useState([]);
   const [newTask, setNewTask] = useState('');
 
+  // --- DEEP WORK STATE ---
+  const [dwTimeLeft, setDwTimeLeft] = useState(25 * 60); // 25 minutes
+  const [dwIsActive, setDwIsActive] = useState(false);
+  const [dwMode, setDwMode] = useState('work'); // 'work' or 'break'
+
+  // --- INITIALIZATION ---
   useEffect(() => {
     setIsMounted(true);
     const savedBD = localStorage.getItem('lifeTimer_birthdate');
@@ -43,6 +55,7 @@ export default function Home() {
     setTasks(savedTasks);
   }, []);
 
+  // --- LIFE TIMER LOGIC ---
   useEffect(() => {
     if (!settings.birthdate || activeTab === 'settings') return;
 
@@ -71,7 +84,7 @@ export default function Home() {
 
         setTimerData({
           timeString: `${String(years).padStart(2, '0')}:${String(days).padStart(3, '0')}:${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`,
-          livedPercent: ((lived / (endOfLife - birthDate)) * 100).toFixed(2),
+          livedPercent: ((lived / (endOfLife - birthDate)) * 100).toFixed(4),
           currentAge: Math.floor((now - birthDate) / (365.25 * 24 * 60 * 60 * 1000)),
           daysLeft: daysRemaining,
           hoursLeft: (daysRemaining * 24) + hours
@@ -82,6 +95,48 @@ export default function Home() {
     return () => clearInterval(interval);
   }, [settings, activeTab]);
 
+  // --- DEEP WORK LOGIC ---
+  useEffect(() => {
+    let interval = null;
+    if (dwIsActive && dwTimeLeft > 0) {
+      interval = setInterval(() => {
+        setDwTimeLeft(time => time - 1);
+      }, 1000);
+    } else if (dwTimeLeft === 0) {
+      setDwIsActive(false);
+      // Auto-switch mode
+      if (dwMode === 'work') {
+        setDwMode('break');
+        setDwTimeLeft(5 * 60);
+      } else {
+        setDwMode('work');
+        setDwTimeLeft(25 * 60);
+      }
+      // You could trigger a notification sound here in the future
+    }
+    return () => clearInterval(interval);
+  }, [dwIsActive, dwTimeLeft, dwMode]);
+
+  const toggleDwTimer = () => setDwIsActive(!dwIsActive);
+  
+  const resetDwTimer = () => {
+    setDwIsActive(false);
+    setDwTimeLeft(dwMode === 'work' ? 25 * 60 : 5 * 60);
+  };
+
+  const switchDwMode = (mode) => {
+    setDwIsActive(false);
+    setDwMode(mode);
+    setDwTimeLeft(mode === 'work' ? 25 * 60 : 5 * 60);
+  };
+
+  const formatDwTime = (seconds) => {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+  };
+
+  // --- HANDLERS ---
   const saveSettings = () => {
     if (!settings.birthdate) return alert('Please select your birthdate');
     localStorage.setItem('lifeTimer_birthdate', settings.birthdate);
@@ -91,7 +146,7 @@ export default function Home() {
   };
 
   const handleAddTask = () => {
-    if (tasks.length >= 3) return alert("Focus mode: Only 3 primary tasks allowed per day.");
+    if (tasks.filter(t => !t.done).length >= 3) return alert("Focus mode: Complete your current 3 primary tasks first.");
     if (newTask.trim() === '') return;
     
     const updatedTasks = [...tasks, { id: Date.now(), text: newTask, done: false }];
@@ -112,130 +167,210 @@ export default function Home() {
     localStorage.setItem('lifeTimer_tasks', JSON.stringify(updatedTasks));
   };
 
+  // --- ANIMATION VARIANTS ---
+  const pageVariants = {
+    initial: { opacity: 0, y: 15, scale: 0.98 },
+    in: { opacity: 1, y: 0, scale: 1 },
+    out: { opacity: 0, y: -15, scale: 0.98 }
+  };
+
   if (!isMounted) return null;
 
   return (
     <div className="container">
-      
-      {/* --- SETTINGS SCREEN --- */}
-      {activeTab === 'settings' && (
-        <div className="setup">
-          <h1>⏳ Life Timer Setup</h1>
-          <p>Set your birthdate once. Saved permanently on this device.</p>
-          
-          <div className="form-group">
-            <label>Your birthdate</label>
-            <input 
-              type="date" 
-              value={settings.birthdate}
-              onChange={(e) => setSettings({...settings, birthdate: e.target.value})} 
-            />
-          </div>
-          
-          <div className="form-group">
-            <label>Life expectancy</label>
-            <select 
-              value={settings.lifeExpectancy}
-              onChange={(e) => setSettings({...settings, lifeExpectancy: parseFloat(e.target.value)})}
-            >
-              <option value="73.4">Global Average (~73.4 years)</option>
-              <option value="70.8">India (~70.8 years)</option>
-              <option value="78.9">USA (~78.9 years)</option>
-              <option value="84.0">Japan (~84.0 years)</option>
-            </select>
-          </div>
-          
-          <button onClick={saveSettings}>🕐 Start Clock</button>
-        </div>
-      )}
-
-      {/* --- OVERVIEW SCREEN --- */}
-      {activeTab === 'overview' && (
-        <div className="timer">
-          <div className="clock-display">
-            <div className="clock-time">{timerData.timeString}</div>
-            <div className="clock-label">YEARS : DAYS : HOURS : MIN : SEC</div>
-            <div className="timer-title">⏳ Time Remaining</div>
-          </div>
-          
-          <div className="progress-section">
-            <div className="progress-bar">
-              <div className="progress-fill" style={{ width: `${timerData.livedPercent}%` }}></div>
+      <AnimatePresence mode="wait">
+        
+        {/* --- SETTINGS SCREEN --- */}
+        {activeTab === 'settings' && (
+          <motion.div key="settings" initial="initial" animate="in" exit="out" variants={pageVariants} transition={{ duration: 0.3 }} className="setup">
+            <Settings size={48} color="#64748b" style={{ margin: '0 auto 15px auto' }} />
+            <h1>System Configuration</h1>
+            <p className="subtitle">Initialize your temporal parameters.</p>
+            
+            <div className="form-group" style={{ marginTop: '30px' }}>
+              <label>Birth Date</label>
+              <input type="date" value={settings.birthdate} onChange={(e) => setSettings({...settings, birthdate: e.target.value})} />
             </div>
-            <div className="progress-text">Life Lived: {timerData.livedPercent}%</div>
-          </div>
-          
-          <div className="stats-grid">
-            <div className="stat-card">
-              <div className="stat-value">{timerData.currentAge}</div>
-              <div className="stat-label">Current Age</div>
+            
+            <div className="form-group">
+              <label>Life Expectancy Model</label>
+              <select value={settings.lifeExpectancy} onChange={(e) => setSettings({...settings, lifeExpectancy: parseFloat(e.target.value)})}>
+                <option value="73.4">Global Average (~73.4 yrs)</option>
+                <option value="70.8">India (~70.8 yrs)</option>
+                <option value="78.9">USA (~78.9 yrs)</option>
+                <option value="84.0">Japan (~84.0 yrs)</option>
+              </select>
             </div>
-            <div className="stat-card">
-              <div className="stat-value">{timerData.daysLeft.toLocaleString()}</div>
-              <div className="stat-label">Days Left</div>
+            
+            <button onClick={saveSettings} style={{ marginTop: '20px' }}>INITIALIZE</button>
+          </motion.div>
+        )}
+
+        {/* --- OVERVIEW SCREEN (LIFE TIMER) --- */}
+        {activeTab === 'overview' && (
+          <motion.div key="overview" initial="initial" animate="in" exit="out" variants={pageVariants} transition={{ duration: 0.3 }} className="timer">
+            <div className="clock-display">
+              <div className="clock-time">{timerData.timeString}</div>
+              <div className="clock-label">YRS : DYS : HRS : MIN : SEC</div>
             </div>
-            <div className="stat-card">
-              <div className="stat-value">{timerData.hoursLeft.toLocaleString()}</div>
-              <div className="stat-label">Hours Left</div>
+            
+            <div className="progress-section">
+              <div className="progress-bar">
+                <div className="progress-fill" style={{ width: `${timerData.livedPercent}%` }}></div>
+              </div>
+              <div className="subtitle" style={{ marginTop: '12px', letterSpacing: '1px' }}>SYSTEM DECAY: {timerData.livedPercent}%</div>
             </div>
-          </div>
-        </div>
-      )}
+            
+            <div className="stats-grid">
+              <div className="stat-card">
+                <div className="stat-value">{timerData.currentAge}</div>
+                <div className="stat-label">Current Age</div>
+              </div>
+              <div className="stat-card">
+                <div className="stat-value">{timerData.daysLeft.toLocaleString()}</div>
+                <div className="stat-label">Days Left</div>
+              </div>
+              <div className="stat-card">
+                <div className="stat-value">{timerData.hoursLeft.toLocaleString()}</div>
+                <div className="stat-label">Hours Left</div>
+              </div>
+            </div>
+          </motion.div>
+        )}
 
-      {/* --- TASKS SCREEN --- */}
-      {activeTab === 'tasks' && (
-        <div className="tasks">
-          <div className="header-container">
-            <h2>Daily Execution</h2>
-            <p className="subtitle">Select exactly 3 critical tasks for today.</p>
-          </div>
+        {/* --- TASKS SCREEN --- */}
+        {activeTab === 'tasks' && (
+          <motion.div key="tasks" initial="initial" animate="in" exit="out" variants={pageVariants} transition={{ duration: 0.3 }} className="tasks">
+            <div className="header-container" style={{ textAlign: 'center', marginBottom: '30px' }}>
+              <h2>Execution Queue</h2>
+              <p className="subtitle">Max capacity: 3 active directives.</p>
+            </div>
 
-          <div className="task-input-container">
-            <input 
-              type="text" 
-              value={newTask}
-              onChange={(e) => setNewTask(e.target.value)}
-              placeholder="Enter a high-impact task..."
-              onKeyDown={(e) => e.key === 'Enter' && handleAddTask()}
-            />
-            <button onClick={handleAddTask} className="add-task-btn">+</button>
-          </div>
+            <div className="task-input-container" style={{ display: 'flex', gap: '10px', marginBottom: '30px' }}>
+              <input 
+                type="text" 
+                value={newTask}
+                onChange={(e) => setNewTask(e.target.value)}
+                placeholder="Enter directive..."
+                onKeyDown={(e) => e.key === 'Enter' && handleAddTask()}
+              />
+              <button onClick={handleAddTask} style={{ width: '60px', padding: '0', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                <Plus size={24} />
+              </button>
+            </div>
 
-          <ul className="task-list">
-            {tasks.map(task => (
-              <li key={task.id} className="task-item">
-                <div className="task-content">
-                  <input 
-                    type="checkbox" 
-                    className="task-checkbox"
-                    checked={task.done}
-                    onChange={() => toggleTask(task.id)}
-                  />
-                  <span className="task-text" style={{ textDecoration: task.done ? 'line-through' : 'none', color: task.done ? '#6b7280' : '#ffffff' }}>
-                    {task.text}
-                  </span>
-                </div>
-                <button className="delete-btn" onClick={() => deleteTask(task.id)}>×</button>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
+            <ul className="task-list" style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '15px' }}>
+              <AnimatePresence>
+                {tasks.map(task => (
+                  <motion.li 
+                    key={task.id} 
+                    initial={{ opacity: 0, x: -20 }} 
+                    animate={{ opacity: 1, x: 0 }} 
+                    exit={{ opacity: 0, x: 20 }}
+                    style={{ 
+                      background: 'rgba(20, 22, 31, 0.6)', border: '1px solid rgba(255,255,255,0.05)', 
+                      borderRadius: '12px', padding: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center'
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '15px', cursor: 'pointer' }} onClick={() => toggleTask(task.id)}>
+                      {task.done ? <CheckCircle2 color="#64748b" /> : <Circle color="#ff6b6b" />}
+                      <span style={{ 
+                        fontSize: '1.05rem', 
+                        color: task.done ? '#64748b' : '#ffffff', 
+                        textDecoration: task.done ? 'line-through' : 'none',
+                        transition: 'all 0.3s'
+                      }}>
+                        {task.text}
+                      </span>
+                    </div>
+                    <Trash2 color="#64748b" size={20} style={{ cursor: 'pointer' }} onClick={() => deleteTask(task.id)} />
+                  </motion.li>
+                ))}
+              </AnimatePresence>
+            </ul>
+          </motion.div>
+        )}
+
+        {/* --- DEEP WORK SCREEN (NEW) --- */}
+        {activeTab === 'deepwork' && (
+          <motion.div key="deepwork" initial="initial" animate="in" exit="out" variants={pageVariants} transition={{ duration: 0.3 }} style={{ textAlign: 'center' }}>
+             <div className="header-container" style={{ marginBottom: '30px' }}>
+              <h2>Deep Work Protocol</h2>
+              <p className="subtitle">Isolate focus. Execute.</p>
+            </div>
+
+            {/* Mode Selectors */}
+            <div style={{ display: 'flex', justifyContent: 'center', gap: '10px', marginBottom: '30px' }}>
+              <button 
+                onClick={() => switchDwMode('work')}
+                style={{ 
+                  padding: '10px 20px', fontSize: '0.8rem', 
+                  background: dwMode === 'work' ? 'rgba(255, 107, 107, 0.15)' : 'transparent',
+                  border: dwMode === 'work' ? '1px solid #ff6b6b' : '1px solid rgba(255,255,255,0.1)',
+                  boxShadow: 'none', color: dwMode === 'work' ? '#ff6b6b' : '#64748b'
+                }}>
+                FOCUS (25m)
+              </button>
+              <button 
+                onClick={() => switchDwMode('break')}
+                style={{ 
+                  padding: '10px 20px', fontSize: '0.8rem', 
+                  background: dwMode === 'break' ? 'rgba(56, 189, 248, 0.15)' : 'transparent',
+                  border: dwMode === 'break' ? '1px solid #38bdf8' : '1px solid rgba(255,255,255,0.1)',
+                  boxShadow: 'none', color: dwMode === 'break' ? '#38bdf8' : '#64748b'
+                }}>
+                REST (5m)
+              </button>
+            </div>
+
+            {/* Main Timer Display */}
+            <div className="clock-display" style={{ 
+              borderColor: dwMode === 'work' ? 'rgba(255, 107, 107, 0.3)' : 'rgba(56, 189, 248, 0.3)',
+              boxShadow: dwMode === 'work' 
+                ? '0 20px 40px rgba(0,0,0,0.5), inset 0 0 40px rgba(255, 107, 107, 0.05)' 
+                : '0 20px 40px rgba(0,0,0,0.5), inset 0 0 40px rgba(56, 189, 248, 0.05)'
+            }}>
+              <div className="clock-time" style={{ 
+                color: dwMode === 'work' ? '#ff6b6b' : '#38bdf8',
+                fontSize: 'clamp(4rem, 15vw, 6rem)',
+                textShadow: dwMode === 'work' ? '0 0 20px rgba(255, 107, 107, 0.4)' : '0 0 20px rgba(56, 189, 248, 0.4)'
+              }}>
+                {formatDwTime(dwTimeLeft)}
+              </div>
+            </div>
+
+            {/* Controls */}
+            <div style={{ display: 'flex', justifyContent: 'center', gap: '20px', marginTop: '30px' }}>
+              <button onClick={toggleDwTimer} style={{ width: '80px', height: '80px', borderRadius: '40px', display: 'flex', justifyContent: 'center', alignItems: 'center', padding: 0 }}>
+                {dwIsActive ? <Pause size={32} fill="white" /> : <Play size={32} fill="white" style={{ marginLeft: '6px' }} />}
+              </button>
+              <button onClick={resetDwTimer} style={{ width: '80px', height: '80px', borderRadius: '40px', background: 'rgba(20, 22, 31, 0.8)', border: '1px solid rgba(255,255,255,0.1)', display: 'flex', justifyContent: 'center', alignItems: 'center', padding: 0, boxShadow: 'none' }}>
+                <RotateCcw size={28} color="#64748b" />
+              </button>
+            </div>
+          </motion.div>
+        )}
+
+      </AnimatePresence>
 
       {/* --- NAVIGATION BAR --- */}
       {settings.birthdate && (
         <nav className="bottom-nav">
           <button className={`nav-item ${activeTab === 'overview' ? 'active' : ''}`} onClick={() => setActiveTab('overview')}>
-            <span className="nav-icon">⏳</span>
-            <span className="nav-text">Overview</span>
+            <Hourglass size={22} />
+            <span className="nav-text">MACRO</span>
           </button>
           <button className={`nav-item ${activeTab === 'tasks' ? 'active' : ''}`} onClick={() => setActiveTab('tasks')}>
-            <span className="nav-icon">🎯</span>
-            <span className="nav-text">Tasks</span>
+            <Target size={22} />
+            <span className="nav-text">QUEUE</span>
+          </button>
+          <button className={`nav-item ${activeTab === 'deepwork' ? 'active' : ''}`} onClick={() => setActiveTab('deepwork')}>
+            <Brain size={22} />
+            <span className="nav-text">FOCUS</span>
           </button>
           <button className={`nav-item ${activeTab === 'settings' ? 'active' : ''}`} onClick={() => setActiveTab('settings')}>
-            <span className="nav-icon">⚙️</span>
-            <span className="nav-text">Settings</span>
+            <Settings size={22} />
+            <span className="nav-text">SYS</span>
           </button>
         </nav>
       )}
