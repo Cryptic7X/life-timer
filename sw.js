@@ -1,7 +1,9 @@
-const CACHE_NAME = 'life-timer-v1';
+const CACHE_NAME = 'life-timer-v2';
 const urlsToCache = [
   './',
   './index.html',
+  './styles.css',
+  './app.js',
   './manifest.json',
   './icon-192.png',
   './icon-512.png'
