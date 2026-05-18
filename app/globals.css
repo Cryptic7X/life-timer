@@ -222,3 +222,18 @@ button:active {
   letter-spacing: 0.5px;
   margin-top: 4px;
 }
+
+/* --- Mobile Optimizations --- */
+@media (max-width: 500px) {
+  .clock-label {
+    letter-spacing: 2px;
+    font-size: 0.55rem;
+  }
+  .clock-time {
+    font-size: clamp(2rem, 11vw, 3.5rem);
+    letter-spacing: 0px;
+  }
+  .clock-display {
+    padding: 30px 15px;
+  }
+}
