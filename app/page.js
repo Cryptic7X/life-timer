@@ -7,10 +7,23 @@ import { Hourglass, Target, Brain, Play, Pause, RotateCcw, Plus, Trash2, CheckCi
 const QUOTES = [
   "The consistent and persistent man of average intelligence is more likely to succeed than an erratic and lazy genius.",
   "You may delay, but time will not.",
-  "Dost thou love life? Then do not squander time, for that is the stuff life is made of.",
+  "Saying 'NO' isn't a rejection; it's a powerful boundary that protects your time, energy, and integrity",
   "The two most powerful warriors are patience and time.",
-  "We are always getting ready to live but never living.",
-  "Amateurs sit and wait for inspiration, the rest of us just get up and go to work."
+  "A restless mind can’t drop a thought; only a stable and calm mind can.",
+  "If you are hardworking and disciplined, if you are a good listener and can work without seeking attention, your success is as good as given.",
+  "Successful people concentrate their time and energy on doing one thing at a time",
+  "Early to bed and early to rise makes a man healthy, wealthy, and wise.",
+  "Ask every morning: 'If today were the last day of my life, would I want to do what I am about to do today?'",
+  "One of the very worst uses of time is to do something very well that need not to be done at all.",
+  "Never say anything about yourself you do not want to come true.",
+  "To earn more, you must learn more.",
+  "Your life only gets better when you get better.",
+  "A goal without a plan is only a dream.",
+  "You cannot control what happens to you, but you can control your attitude toward what happens",
+  "Never complain, never explain. Resist the temptation to defend yourself or make excuses.",
+  "Leaders think and talk about the solutions. Followers think and talk about the problems.",
+  "Successful people make a habit of doing the things that unsuccessful people don't like to do."
+  
 ];
 
 // Helper to format timestamps beautifully
