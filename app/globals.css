@@ -5,8 +5,8 @@
 }
 
 body {
-  /* Deep, cinematic void background */
-  background: radial-gradient(circle at 50% 0%, #1a1c29 0%, #090a0f 100%);
+  /* Deep Ocean void background */
+  background: radial-gradient(circle at 50% 0%, #0f172a 0%, #020617 100%);
   color: #e2e8f0;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   min-height: 100vh;
@@ -21,16 +21,21 @@ body {
   width: 100%;
   max-width: 650px;
   padding: 20px;
-  padding-bottom: 100px;
+  padding-bottom: 110px;
 }
 
 /* --- High-End Typography & Headings --- */
-h1, h2 {
-  background: linear-gradient(180deg, #ffffff 0%, #9ca3af 100%);
+h1, h2, h3 {
+  background: linear-gradient(180deg, #ffffff 0%, #94a3b8 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   font-weight: 800;
   letter-spacing: -0.5px;
+}
+
+h3 {
+  font-size: 1.2rem;
+  margin-bottom: 12px;
 }
 
 .subtitle {
@@ -43,9 +48,9 @@ h1, h2 {
 input[type="text"], input[type="date"], input[type="number"], select {
   width: 100%;
   padding: 16px 20px;
-  background: rgba(20, 22, 31, 0.6);
+  background: rgba(15, 23, 42, 0.6);
   border: 1px solid rgba(255, 255, 255, 0.05);
-  border-top: 1px solid rgba(255, 255, 255, 0.1); /* Specular highlight */
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 14px;
   color: #ffffff;
   font-size: 1rem;
@@ -56,25 +61,25 @@ input[type="text"], input[type="date"], input[type="number"], select {
 
 input:focus, select:focus {
   outline: none;
-  border-color: rgba(255, 107, 107, 0.5);
-  background: rgba(30, 33, 46, 0.8);
-  box-shadow: inset 0 2px 4px rgba(0,0,0,0.5), 0 0 20px rgba(255, 107, 107, 0.15);
+  border-color: rgba(6, 182, 212, 0.5); /* Cyan focus */
+  background: rgba(30, 41, 59, 0.8);
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.5), 0 0 20px rgba(6, 182, 212, 0.15);
 }
 
 /* --- Tactile 3D Buttons --- */
 button {
   padding: 16px 24px;
-  background: linear-gradient(135deg, #ff5252 0%, #e63946 100%);
+  background: linear-gradient(135deg, #06b6d4 0%, #0284c7 100%); /* Cyan to Sky Blue */
   color: #ffffff;
   border: none;
-  border-top: 1px solid #ff8a8a; /* 3D edge highlight */
+  border-top: 1px solid #67e8f9;
   border-radius: 14px;
   font-size: 1.05rem;
   font-weight: 700;
   letter-spacing: 0.5px;
   cursor: pointer;
   box-shadow: 
-    0 8px 25px rgba(230, 57, 70, 0.3),
+    0 8px 25px rgba(6, 182, 212, 0.3),
     inset 0 -4px 10px rgba(0,0,0,0.2);
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   text-shadow: 0 1px 2px rgba(0,0,0,0.3);
@@ -83,48 +88,67 @@ button {
 button:hover {
   transform: translateY(-2px);
   box-shadow: 
-    0 12px 30px rgba(230, 57, 70, 0.4),
+    0 12px 30px rgba(6, 182, 212, 0.4),
     inset 0 -4px 10px rgba(0,0,0,0.2);
 }
 
 button:active {
   transform: translateY(2px);
   box-shadow: 
-    0 2px 10px rgba(230, 57, 70, 0.3),
-    inset 0 2px 5px rgba(0,0,0,0.4); /* Pushed in effect */
+    0 2px 10px rgba(6, 182, 212, 0.3),
+    inset 0 2px 5px rgba(0,0,0,0.4);
 }
 
 /* --- The Main Clock Terminal --- */
 .clock-display {
-  background: rgba(10, 11, 16, 0.8);
-  border: 1px solid rgba(255, 107, 107, 0.2);
-  border-top: 1px solid rgba(255, 107, 107, 0.4);
+  background: rgba(15, 23, 42, 0.8);
+  border: 1px solid rgba(6, 182, 212, 0.2);
+  border-top: 1px solid rgba(6, 182, 212, 0.4);
   border-radius: 24px;
-  padding: 40px 30px;
+  padding: 35px 20px;
   margin-bottom: 24px;
   box-shadow: 
     0 20px 40px rgba(0,0,0,0.5),
-    inset 0 0 40px rgba(255, 107, 107, 0.05);
+    inset 0 0 40px rgba(6, 182, 212, 0.05);
   backdrop-filter: blur(20px);
-  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 4px;
 }
 
-.clock-time {
-  font-size: clamp(2rem, 8vw, 3.5rem);
+.time-block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.time-value {
+  font-size: clamp(2rem, 7vw, 3.5rem);
   font-weight: 800;
-  letter-spacing: 2px;
-  color: #ff6b6b;
+  letter-spacing: 1px;
+  color: #22d3ee; /* Electric Cyan */
   font-family: 'SF Mono', 'Courier New', monospace;
-  text-shadow: 0 0 20px rgba(255, 107, 107, 0.4);
+  text-shadow: 0 0 15px rgba(34, 211, 238, 0.4);
+  line-height: 1;
 }
 
-.clock-label {
+.time-label {
   color: #64748b;
-  font-size: 0.7rem;
-  letter-spacing: 6px;
-  margin-top: 10px;
+  font-size: 0.65rem;
+  letter-spacing: 2px;
+  margin-top: 8px;
   text-transform: uppercase;
   font-weight: 600;
+}
+
+.time-separator {
+  font-size: clamp(1.5rem, 6vw, 3rem);
+  font-weight: 800;
+  color: #22d3ee;
+  opacity: 0.5;
+  transform: translateY(-8px);
 }
 
 /* --- Data Stats Grid --- */
@@ -136,13 +160,14 @@ button:active {
 }
 
 .stat-card {
-  background: rgba(20, 22, 31, 0.5);
+  background: rgba(15, 23, 42, 0.5);
   border: 1px solid rgba(255, 255, 255, 0.03);
   border-top: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 16px;
   padding: 20px 12px;
   box-shadow: 0 10px 30px rgba(0,0,0,0.2);
   backdrop-filter: blur(10px);
+  text-align: center;
 }
 
 .stat-value {
@@ -171,8 +196,8 @@ button:active {
 
 .progress-fill {
   height: 100%;
-  background: linear-gradient(90deg, #ff5252, #ff8a8a);
-  box-shadow: 0 0 15px rgba(255, 82, 82, 0.6);
+  background: linear-gradient(90deg, #0284c7, #22d3ee); /* Cyan Gradient */
+  box-shadow: 0 0 15px rgba(34, 211, 238, 0.6);
   border-radius: 8px;
   transition: width 1s cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -185,7 +210,7 @@ button:active {
   transform: translateX(-50%);
   width: 90%;
   max-width: 400px;
-  background: rgba(15, 17, 26, 0.75);
+  background: rgba(2, 6, 23, 0.85);
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
   border: 1px solid rgba(255, 255, 255, 0.08);
@@ -194,7 +219,7 @@ button:active {
   display: flex;
   justify-content: space-around;
   padding: 10px 15px;
-  box-shadow: 0 20px 40px rgba(0,0,0,0.6);
+  box-shadow: 0 20px 40px rgba(0,0,0,0.8);
   z-index: 1000;
 }
 
@@ -203,7 +228,7 @@ button:active {
   box-shadow: none;
   border: none;
   padding: 10px 20px;
-  color: #64748b;
+  color: #475569;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -213,7 +238,7 @@ button:active {
 
 .nav-item.active {
   background: rgba(255, 255, 255, 0.05);
-  color: #ff6b6b;
+  color: #22d3ee;
 }
 
 .nav-text {
@@ -223,17 +248,29 @@ button:active {
   margin-top: 4px;
 }
 
+/* --- Task List Customization --- */
+.task-section {
+  background: rgba(15, 23, 42, 0.4);
+  border: 1px solid rgba(255,255,255,0.05);
+  border-radius: 16px;
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+.task-input-container {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
 /* --- Mobile Optimizations --- */
 @media (max-width: 500px) {
-  .clock-label {
-    letter-spacing: 2px;
-    font-size: 0.55rem;
-  }
-  .clock-time {
-    font-size: clamp(2rem, 11vw, 3.5rem);
-    letter-spacing: 0px;
-  }
   .clock-display {
-    padding: 30px 15px;
+    padding: 30px 10px;
+    gap: 2px;
+  }
+  .time-separator {
+    font-size: 1.5rem;
+    transform: translateY(-6px);
   }
 }
