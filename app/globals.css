@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@1,400;1,600&display=swap');
+
 * {
   margin: 0;
   padding: 0;
@@ -5,7 +7,7 @@
 }
 
 body {
-  /* Deep Ocean void background */
+  /* Deep, cinematic void background */
   background: radial-gradient(circle at 50% 0%, #0f172a 0%, #020617 100%);
   color: #e2e8f0;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
@@ -20,22 +22,75 @@ body {
 .container {
   width: 100%;
   max-width: 650px;
+  /* Added top padding to make room for the new logo */
+  padding: 80px 20px 100px 20px; 
+}
+
+/* --- The KAIROS Brand Header --- */
+.top-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
   padding: 20px;
-  padding-bottom: 110px;
+  display: flex;
+  justify-content: flex-start;
+  z-index: 50;
+  pointer-events: none; /* Lets clicks pass through the empty space */
+}
+
+.brand-logo {
+  pointer-events: auto; /* Re-enables clicks for the logo */
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  padding: 8px 16px;
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(6, 182, 212, 0.2);
+  border-radius: 20px;
+  backdrop-filter: blur(10px);
+  transition: all 0.3s ease;
+}
+
+.brand-logo:hover {
+  background: rgba(15, 23, 42, 0.9);
+  border-color: rgba(6, 182, 212, 0.5);
+  box-shadow: 0 0 15px rgba(6, 182, 212, 0.2);
+}
+
+.brand-name {
+  font-weight: 800;
+  letter-spacing: 2px;
+  background: linear-gradient(90deg, #06b6d4, #8b5cf6);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  font-size: 1.1rem;
+}
+
+/* --- Dynamic Elegant Quote --- */
+.quote-container {
+  text-align: center;
+  margin: 0 auto 30px auto;
+  max-width: 90%;
+}
+
+.quote-text {
+  font-family: 'Playfair Display', serif;
+  font-style: italic;
+  color: #94a3b8;
+  font-size: clamp(1.1rem, 4vw, 1.4rem);
+  line-height: 1.5;
+  text-shadow: 0 4px 15px rgba(0,0,0,0.8);
 }
 
 /* --- High-End Typography & Headings --- */
-h1, h2, h3 {
+h1, h2 {
   background: linear-gradient(180deg, #ffffff 0%, #94a3b8 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   font-weight: 800;
   letter-spacing: -0.5px;
-}
-
-h3 {
-  font-size: 1.2rem;
-  margin-bottom: 12px;
 }
 
 .subtitle {
@@ -48,9 +103,9 @@ h3 {
 input[type="text"], input[type="date"], input[type="number"], select {
   width: 100%;
   padding: 16px 20px;
-  background: rgba(15, 23, 42, 0.6);
+  background: rgba(30, 41, 59, 0.4);
   border: 1px solid rgba(255, 255, 255, 0.05);
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  border-top: 1px solid rgba(255, 255, 255, 0.1); 
   border-radius: 14px;
   color: #ffffff;
   font-size: 1rem;
@@ -61,7 +116,7 @@ input[type="text"], input[type="date"], input[type="number"], select {
 
 input:focus, select:focus {
   outline: none;
-  border-color: rgba(6, 182, 212, 0.5); /* Cyan focus */
+  border-color: rgba(6, 182, 212, 0.5); 
   background: rgba(30, 41, 59, 0.8);
   box-shadow: inset 0 2px 4px rgba(0,0,0,0.5), 0 0 20px rgba(6, 182, 212, 0.15);
 }
@@ -69,10 +124,10 @@ input:focus, select:focus {
 /* --- Tactile 3D Buttons --- */
 button {
   padding: 16px 24px;
-  background: linear-gradient(135deg, #06b6d4 0%, #0284c7 100%); /* Cyan to Sky Blue */
+  background: linear-gradient(135deg, #06b6d4 0%, #3b82f6 100%); 
   color: #ffffff;
   border: none;
-  border-top: 1px solid #67e8f9;
+  border-top: 1px solid #67e8f9; 
   border-radius: 14px;
   font-size: 1.05rem;
   font-weight: 700;
@@ -96,59 +151,61 @@ button:active {
   transform: translateY(2px);
   box-shadow: 
     0 2px 10px rgba(6, 182, 212, 0.3),
-    inset 0 2px 5px rgba(0,0,0,0.4);
+    inset 0 2px 5px rgba(0,0,0,0.4); 
 }
 
-/* --- The Main Clock Terminal --- */
+/* --- The Main Clock Terminal (FLEXBOX LAYOUT) --- */
 .clock-display {
-  background: rgba(15, 23, 42, 0.8);
+  background: rgba(15, 23, 42, 0.6);
   border: 1px solid rgba(6, 182, 212, 0.2);
   border-top: 1px solid rgba(6, 182, 212, 0.4);
   border-radius: 24px;
-  padding: 35px 20px;
+  padding: 40px 20px;
   margin-bottom: 24px;
   box-shadow: 
     0 20px 40px rgba(0,0,0,0.5),
     inset 0 0 40px rgba(6, 182, 212, 0.05);
   backdrop-filter: blur(20px);
+  position: relative;
+  overflow: hidden;
+}
+
+.clock-flex-container {
   display: flex;
   justify-content: center;
   align-items: center;
-  gap: 4px;
+  gap: clamp(4px, 2vw, 15px);
 }
 
-.time-block {
+.time-unit {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+  width: clamp(45px, 12vw, 70px);
 }
 
-.time-value {
-  font-size: clamp(2rem, 7vw, 3.5rem);
+.unit-value {
+  font-size: clamp(1.6rem, 7vw, 3.2rem);
   font-weight: 800;
-  letter-spacing: 1px;
-  color: #22d3ee; /* Electric Cyan */
+  color: #06b6d4; 
+  text-shadow: 0 0 20px rgba(6, 182, 212, 0.5);
   font-family: 'SF Mono', 'Courier New', monospace;
-  text-shadow: 0 0 15px rgba(34, 211, 238, 0.4);
   line-height: 1;
 }
 
-.time-label {
-  color: #64748b;
-  font-size: 0.65rem;
+.unit-label {
+  font-size: clamp(0.55rem, 2vw, 0.75rem);
+  color: #94a3b8;
   letter-spacing: 2px;
   margin-top: 8px;
-  text-transform: uppercase;
   font-weight: 600;
 }
 
-.time-separator {
-  font-size: clamp(1.5rem, 6vw, 3rem);
+.unit-separator {
+  font-size: clamp(1.6rem, 7vw, 3.2rem);
+  color: rgba(255,255,255,0.1);
+  margin-top: -20px;
   font-weight: 800;
-  color: #22d3ee;
-  opacity: 0.5;
-  transform: translateY(-8px);
 }
 
 /* --- Data Stats Grid --- */
@@ -160,14 +217,13 @@ button:active {
 }
 
 .stat-card {
-  background: rgba(15, 23, 42, 0.5);
+  background: rgba(30, 41, 59, 0.4);
   border: 1px solid rgba(255, 255, 255, 0.03);
   border-top: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 16px;
   padding: 20px 12px;
   box-shadow: 0 10px 30px rgba(0,0,0,0.2);
   backdrop-filter: blur(10px);
-  text-align: center;
 }
 
 .stat-value {
@@ -196,8 +252,8 @@ button:active {
 
 .progress-fill {
   height: 100%;
-  background: linear-gradient(90deg, #0284c7, #22d3ee); /* Cyan Gradient */
-  box-shadow: 0 0 15px rgba(34, 211, 238, 0.6);
+  background: linear-gradient(90deg, #8b5cf6, #06b6d4);
+  box-shadow: 0 0 15px rgba(6, 182, 212, 0.6);
   border-radius: 8px;
   transition: width 1s cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -209,8 +265,8 @@ button:active {
   left: 50%;
   transform: translateX(-50%);
   width: 90%;
-  max-width: 400px;
-  background: rgba(2, 6, 23, 0.85);
+  max-width: 320px;
+  background: rgba(15, 23, 42, 0.75);
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
   border: 1px solid rgba(255, 255, 255, 0.08);
@@ -219,7 +275,7 @@ button:active {
   display: flex;
   justify-content: space-around;
   padding: 10px 15px;
-  box-shadow: 0 20px 40px rgba(0,0,0,0.8);
+  box-shadow: 0 20px 40px rgba(0,0,0,0.6);
   z-index: 1000;
 }
 
@@ -228,7 +284,7 @@ button:active {
   box-shadow: none;
   border: none;
   padding: 10px 20px;
-  color: #475569;
+  color: #64748b;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -237,8 +293,8 @@ button:active {
 }
 
 .nav-item.active {
-  background: rgba(255, 255, 255, 0.05);
-  color: #22d3ee;
+  background: rgba(6, 182, 212, 0.1);
+  color: #06b6d4;
 }
 
 .nav-text {
@@ -248,75 +304,17 @@ button:active {
   margin-top: 4px;
 }
 
-/* --- Task List Customization --- */
-.task-section {
-  background: rgba(15, 23, 42, 0.4);
-  border: 1px solid rgba(255,255,255,0.05);
-  border-radius: 16px;
-  padding: 20px;
-  margin-bottom: 20px;
-}
-
-.task-input-container {
-  display: flex;
-  gap: 10px;
-  margin-bottom: 20px;
-}
-
 /* --- Mobile Optimizations --- */
 @media (max-width: 500px) {
+  .clock-label {
+    letter-spacing: 2px;
+    font-size: 0.55rem;
+  }
+  .clock-time {
+    font-size: clamp(2rem, 11vw, 3.5rem);
+    letter-spacing: 0px;
+  }
   .clock-display {
-    padding: 30px 10px;
-    gap: 2px;
+    padding: 30px 15px;
   }
-  .time-separator {
-    font-size: 1.5rem;
-    transform: translateY(-6px);
-  }
-}
-/* --- Cinematic Floating Quotes Background --- */
-.marquee-container {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  overflow: hidden;
-  z-index: -1; /* Pushes it behind all your UI */
-  pointer-events: none; /* Prevents it from interfering with clicks */
-  display: flex;
-  flex-direction: column;
-  justify-content: space-evenly;
-  opacity: 0.04; /* Very subtle, barely there ghost text */
-}
-
-.marquee-track {
-  display: flex;
-  width: max-content;
-  animation: scroll-left 120s linear infinite; /* Ultra-slow smooth scrolling */
-}
-
-.marquee-track.reverse {
-  animation: scroll-right 150s linear infinite;
-}
-
-.marquee-text {
-  font-size: clamp(2rem, 5vw, 4rem);
-  font-weight: 900;
-  color: #22d3ee; /* Cyan tint */
-  white-space: nowrap;
-  padding: 0 40px;
-  text-transform: uppercase;
-  letter-spacing: 4px;
-  font-family: 'SF Mono', 'Courier New', monospace;
-}
-
-@keyframes scroll-left {
-  0% { transform: translateX(0); }
-  100% { transform: translateX(-50%); }
-}
-
-@keyframes scroll-right {
-  0% { transform: translateX(-50%); }
-  100% { transform: translateX(0); }
 }
