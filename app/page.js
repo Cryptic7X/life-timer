@@ -216,7 +216,7 @@ export default function Home() {
         <motion.header className="top-header" initial={{y: -20, opacity: 0}} animate={{y: 0, opacity: 1}} transition={{duration: 0.5}}>
           <div className="brand-logo" onClick={() => { setActiveTab('settings'); setIsEditingSettings(false); }}>
             <Hexagon size={24} color="#06b6d4" strokeWidth={2.5} />
-            <span className="brand-name">KALA</span>
+            <span className="brand-name">KAL</span>
           </div>
         </motion.header>
       )}
