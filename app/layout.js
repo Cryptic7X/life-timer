@@ -1,8 +1,12 @@
 import "./globals.css";
 
 export const metadata = {
-  title: "Life Timer Pro ⏳",
+  title: "Kala ⏳",
   description: "Count your remaining time based on average life expectancy",
+  icons: {
+    icon: '/icon-192.png',
+    apple: '/icon-192.png',
+  },
 };
 
 export default function RootLayout({ children }) {
