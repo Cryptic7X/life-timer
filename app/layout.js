@@ -4,10 +4,10 @@ export const metadata = {
   title: "Kala ⏳",
   description: "Count your remaining time based on average life expectancy",
   icons: {
-    icon: '/icon-192.png',
-    apple: '/icon-192.png',
+    icon: '/icon.svg',
+    apple: '/icon.svg',
   },
-  manifest: '/manifest.json', // This connects your PWA config!
+  manifest: '/manifest.json', 
 };
 
 export default function RootLayout({ children }) {
